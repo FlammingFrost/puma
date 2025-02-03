@@ -1,0 +1,91 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env/
+.venv/
+venv/
+Pipfile
+Pipfile.lock
+poetry.lock
+
+# Jupyter Notebook checkpoints (if used for testing)
+.ipynb_checkpoints/
+
+# Log files and debug artifacts
+logs/
+*.log
+debug.log
+
+# Configurations and environment variables
+# .env
+# *.ini
+# *.toml
+# *.yaml
+# settings.yaml
+
+# Cache files
+cache/
+storage/cache/
+
+# Vector database files
+storage/vectors/
+storage/vectors/*.db
+storage/vectors/*.pkl
+storage/vectors/*.faiss
+storage/vectors/*.npy
+
+# Large model files (if downloaded)
+models/
+*.h5
+*.pt
+*.onnx
+
+# FastAPI / Web Server artifacts
+*.sqlite3
+instance/
+db.sqlite3
+media/
+
+# Node.js dependencies (if frontend is added later)
+node_modules/
+dist/
+build/
+yarn.lock
+package-lock.json
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# VS Code settings
+.vscode/
+*.code-workspace
+
+# JetBrains IDE (PyCharm) settings
+.idea/
+
+# Python packaging files
+*.egg-info/
+*.egg
+.eggs/
+
+# Testing / coverage reports
+.coverage
+coverage.xml
+htmlcov/
+pytest_cache/
+
+# Black & Mypy static analysis
+.mypy_cache/
+.black/
+
+# Ignore temporary files
+tmp/
+temp/
+*.bak
+*.swp
+*.swo
