@@ -1,4 +1,4 @@
-# GREP: GitHub Repository Exploration Platform
+# PUMA: A Project Understanding & Modification Accelerator
 A Retrieval-Augmented Generation (RAG) system designed to process and query GitHub repositories or project folders.
 The system is built to support user's modifications without a clear understanding of the codebase/project structure. This system accelerates your coding process when ...
 - You want to find out how a novel operation is defined in a deep learning method codebase. But you don't know where to look.
