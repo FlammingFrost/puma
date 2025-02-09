@@ -1,0 +1,21 @@
+text,metadata
+"def quadratic(a, b, c, x):
+    return a*x**2 + b*x + c","{'filename': 'file_0.py', 'line_number': 24}"
+"def power(base, exp):
+    return base ** exp","{'filename': 'file_1.py', 'line_number': 20}"
+"def sine_wave(x):
+    return math.sin(x)","{'filename': 'file_2.py', 'line_number': 2}"
+"def cosine_wave(x):
+    return math.cos(x)","{'filename': 'file_3.py', 'line_number': 79}"
+"def tangent_wave(x):
+    return math.tan(x)","{'filename': 'file_4.py', 'line_number': 34}"
+"def logarithm(x, base=math.e):
+    return math.log(x, base)","{'filename': 'file_5.py', 'line_number': 8}"
+"def exponential(x):
+    return math.exp(x)","{'filename': 'file_6.py', 'line_number': 91}"
+"def factorial(n):
+    return math.factorial(n)","{'filename': 'file_7.py', 'line_number': 100}"
+"def absolute_value(x):
+    return abs(x)","{'filename': 'file_8.py', 'line_number': 62}"
+"def hypotenuse(a, b):
+    return math.sqrt(a**2 + b**2)","{'filename': 'file_9.py', 'line_number': 63}"
