@@ -25,6 +25,7 @@ debug.log
 # *.toml
 # *.yaml
 # settings.yaml
+api_key.yaml
 
 # Cache files
 cache/

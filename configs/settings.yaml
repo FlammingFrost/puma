@@ -1,5 +1,11 @@
 # Configuration settings
+retriever_name: "Retriever with DummyDB v1.0"
+vectorbase_top_k: 5
+model: 'openai'  # 'openai' or 'claude'
+# API keys and model names for OpenAI and Claude
 openai:
-  api_key: "your-openai-api-key"
-  model_name: "gpt-4"
+  model_name: "gpt-3.5-turbo"
   temperature: 0.3
+claude:
+  model_name: ""
+  temperature: ""

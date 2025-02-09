@@ -8,6 +8,7 @@ def load_config():
     """Loads configuration from settings.yaml"""
     with open(CONFIG_PATH, "r") as file:
         config = yaml.safe_load(file)
+    
         
     # Override API key with environment variable if set
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

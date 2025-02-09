@@ -1,5 +1,6 @@
 # TODO: Implement this module
-from langchain.chat_models import ChatOpenAI, ChatClaude
+from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 from langchain.schema import HumanMessage
 from configs.config_loader import load_config
 
@@ -17,7 +18,7 @@ try:
             temperature=temperature
         )
     elif model == "claude":
-        llm = ChatClaude(
+        llm = ChatAnthropic(
             model_name=model_name,
             api_key=api_key,
             temperature=temperature
@@ -59,6 +60,5 @@ def generate_response(user_query: str, retrieved_chunks: list) -> str:
     """
 
     # Query LLM
-    response = llm([HumanMessage(content=prompt)])
-    
+    response = llm.invoke([HumanMessage(content=prompt)])    
     return response.content
