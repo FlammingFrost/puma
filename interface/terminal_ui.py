@@ -3,6 +3,7 @@
 from query_engine.retriever import VBRetriever
 from query_engine.query_handler import process_query
 from configs.config_loader import load_config
+from tools.logger_config import logger
 
 def main():
     config = load_config()
@@ -14,7 +15,8 @@ def main():
         available_models = client.models.list()
         model_list = [model.id for model in available_models.data]
     except openai.OpenAIError as e:
-        print(f"OpenAI API error: {e}")
+        logger.error(f"OpenAI API error: {e}")
+        raise e
     assert config["openai"]["model_name"] in model_list, f"Invalid model name: {config['openai']['model_name']}. Available models: {model_list}"
         
         
@@ -31,7 +33,9 @@ def main():
             break
 
         response = process_query(user_input, retriever)
+        logger.info(f"User query: \n{user_input}")
         print("\n[Response]:")
+        logger.info(f"Response: \n{response}")
         print(response)
 
 if __name__ == "__main__":

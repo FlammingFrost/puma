@@ -29,14 +29,8 @@ api_key.yaml
 
 # Cache files
 cache/
-storage/cache/
-
 # Vector database files
-storage/vectors/
-storage/vectors/*.db
-storage/vectors/*.pkl
-storage/vectors/*.faiss
-storage/vectors/*.npy
+storage/
 
 # Large model files (if downloaded)
 models/
@@ -90,3 +84,5 @@ temp/
 *.bak
 *.swp
 *.swo
+
+.git/
