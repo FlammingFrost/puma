@@ -1,5 +1,6 @@
 import os
 import re
+from logger_config import logger
 
 def gitignore_to_regex(pattern):
     """Convert a .gitignore pattern to a regex pattern."""
@@ -57,6 +58,7 @@ def build_tree(base_path, gitignore_path):
     """Build a dictionary tree of the directory structure excluding ignored files."""
     regex_patterns = load_gitignore(gitignore_path)
     tree = {}
+    logger.debug(f"Scanning directory: {base_path}")
     
     for root, dirs, files in os.walk(base_path, topdown=True):
         rel_root = os.path.relpath(root, base_path)
