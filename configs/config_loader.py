@@ -17,7 +17,5 @@ def load_config():
         config["openai"]["api_key"] = OPENAI_API_KEY
     if CLAUDE_API_KEY:
         config["claude"]["api_key"] = CLAUDE_API_KEY
-        
-    os.environ['DEBUG'] = str(config['debug'])
     
     return config

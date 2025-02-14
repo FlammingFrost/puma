@@ -162,7 +162,7 @@ class DummyVB(VectorBase):
         import pandas as pd
         data = pd.read_csv("tests/data/dummyVB/Fake_Python_Math_Functions.csv")
         self.data = [{"text": row["text"], "metadata": eval(row["metadata"])} for _, row in data.iterrows()]
-        print("Dummy VectorBase initialized.")
+        logger.info("Dummy VectorBase initialized.")
     def retrieve(self, query: str, top_k: int) -> list[dict]:
         return self.data
     

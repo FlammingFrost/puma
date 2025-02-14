@@ -85,5 +85,4 @@ temp/
 *.swp
 *.swo
 
-.gitignore
 .git/
