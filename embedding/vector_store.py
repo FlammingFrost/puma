@@ -2,7 +2,7 @@
 import chromadb
 import os
 
-from data_processing.chunker import chunk_file
+from data_processing.chunker import Chunker
 
 from tools.logger_config import logger
 
@@ -14,7 +14,7 @@ META_DATA_FORMAT = {
     'line_number_start': int,
     'line_number_end': int,
     'file_type': ['code', 'text', 'config', 'data'],
-    'file_language': ['py', 'java', 'c', 'cpp', 'json', 'yaml', 'toml', 'md', 'txt'],
+    'file_language': ['py', 'java', 'c', 'cpp', 'json', 'yaml', 'yml', 'toml', 'md', 'txt'],
     'function_type': None,
     'function_name': None,
     'dependencies': None
@@ -30,17 +30,18 @@ class VectorBase:
         embedding_func: The embedding function to use to encode the text to a vector.
     """
     
-    def __init__(self, vector_store_path: str, embedding_func):
+    def __init__(self, vector_store_path: str, embedding_func, chunk_size=300, chunk_overlap=50):
         # TODO: Implement vector store initialization
         client = chromadb.PersistentClient(path=vector_store_path)
         try:
-            self.collection = client.get_collection("vector_store")
+            self.collection = client.get_collerction("vector_store")
         except chromadb.CollectionNotFoundError:
             self.collection = client.create_collection("vector_store")
             logger.info("VectorBase collection created.")
         logger.info("VectorBase initialized.")
         
         self.embedding_func = embedding_func
+        self.chunker = Chunker(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
         
     def retrieve(self, query: str, top_k: int) -> list[dict]:
         """
@@ -118,7 +119,7 @@ class VectorBase:
         assert os.path.exists(file_path), "File path does not exist."
         assert os.path.isfile(file_path), "File path is not a file."
         
-        processed_text = chunk_file(file_path)
+        processed_text = self.chunker.chunk_file(file_path)
         
         self._delete_by_path(file_path)
         for chunk in processed_text:
