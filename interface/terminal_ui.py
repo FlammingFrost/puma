@@ -2,11 +2,11 @@
 # interface/terminal_ui.py
 from query_engine.retriever import VBRetriever
 from query_engine.query_handler import process_query
-from configs.config_loader import load_config
-from tools.logger_config import logger
+from configs.configurator import config_loader
+from tools.logger import logger
 
 def main():
-    config = load_config()
+    config = config_loader.config
     
     # Available models list
     import openai
@@ -31,11 +31,14 @@ def main():
         user_input = input("\n[Enter your query]: ")
         if user_input.lower() == "exit()":
             break
+        if user_input == "debug":
+            logger.debug("Debug message")
+            continue
+        if user_input == "":
+            continue
 
         response = process_query(user_input, retriever)
-        logger.info(f"User query: \n{user_input}")
         print("\n[Response]:")
-        logger.info(f"Response: \n{response}")
         print(response)
 
 if __name__ == "__main__":

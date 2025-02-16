@@ -2,11 +2,11 @@
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain.schema import HumanMessage
-from configs.config_loader import load_config
+from configs.configurator import config_loader
 
 # Initialize the LLM model
 try:
-    config = load_config()
+    config = config_loader.config
     model = config["model"]
     api_key = config[model]["api_key"]
     temperature = config[model]["temperature"]
@@ -14,7 +14,7 @@ try:
     if model == "openai":
         llm = ChatOpenAI(
             model_name=model_name,
-            openai_api_key=api_key,
+            api_key=api_key,
             temperature=temperature
         )
     elif model == "claude":

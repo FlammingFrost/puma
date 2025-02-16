@@ -4,7 +4,7 @@ import os
 
 # from data_processing.chunker import chunk_file
 
-from tools.logger_config import logger
+from tools.logger import logger
 
 module_implemented = False
 META_DATA_FORMAT = {
