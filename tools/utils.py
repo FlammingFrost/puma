@@ -1,6 +1,6 @@
 import os
 import re
-from logger_config import logger
+from tools.logger import logger
 
 def gitignore_to_regex(pattern):
     """Convert a .gitignore pattern to a regex pattern."""

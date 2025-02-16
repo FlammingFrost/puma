@@ -1,6 +1,8 @@
 # TODO: Implement this module
 from query_engine.retriever import VBRetriever
 from query_engine.generator import generate_response
+from tools.logger import logger
+from configs.configurator import config_loader
 
 def process_query(user_query: str, retriever: VBRetriever) -> str:
     """
@@ -17,7 +19,9 @@ def process_query(user_query: str, retriever: VBRetriever) -> str:
     Returns:
         str: The response from the LLM.
     """
-    print(f"#Log query_engine/query_handler.py# [Query Received]: {user_query}")
+    logger.info(f"[Query Received]: {user_query}")
+
+    config = config_loader.config
 
     # Retrieve relevant code chunks
     retrieved_chunks = retriever.retrieve_relevant_chunks(user_query)
@@ -27,5 +31,5 @@ def process_query(user_query: str, retriever: VBRetriever) -> str:
 
     # Generate LLM response based on retrieved code
     response = generate_response(user_query, retrieved_chunks)
-    
+    logger.info(f"[Response Generated]: {response}")
     return response
