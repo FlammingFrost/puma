@@ -1,7 +1,9 @@
 # TODO: Implement this module
 from embedding.vector_store import VectorBase, DummyVB
+from configs.configurator import config as global_config
+
 class VBRetriever:
-    def __init__(self, config: dict):
+    def __init__(self, config = None):
         """
         Initializes the VectorBase retriever.
         **Note**: The VectorBase is a dummy implementation for now.
@@ -19,6 +21,9 @@ class VBRetriever:
         except Exception as e:
             print(f"Error initializing VectorBase: {e}, using DummyVB instead.")
             self.VB = DummyVB()
+        
+        if config is None:
+            config = global_config
         
         self.top_k = config["vectorbase_top_k"]
         self.name = config.get("retriever_name", "VBRetriever")
@@ -41,8 +46,10 @@ class VBRetriever:
         retrieved_chunks = [
             {
                 "code": result["text"], 
-                "filename": result["metadata"]["filename"],
-                "line_number": result["metadata"]["line_number"]
+                "file_name": result["metadata"]["file_name"],
+                "file_path": result["metadata"]["file_path"],
+                "line_number_start": result["metadata"]["line_number_start"],
+                "line_number_end": result["metadata"]["line_number_end"],
             } 
             for result in results
         ]
