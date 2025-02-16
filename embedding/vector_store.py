@@ -7,7 +7,19 @@ import os
 from tools.logger import logger
 
 module_implemented = False
-META_DATA_FORMAT = {
+
+    
+
+class VectorBase:
+    """
+    A class to store and retrieve vectors.
+    
+    Attributes:
+        META_DATA_FORMAT (dict): The metadata format.
+        collection (chromadb.Collection): The collection to store the vectors.
+        embedding_func (function): The embedding function to encode text to a vector.
+    """
+    META_DATA_FORMAT = {
     'chunked_document': str,
     'file_name': str,
     'file_path': str,
@@ -18,20 +30,14 @@ META_DATA_FORMAT = {
     'function_type': None,
     'function_name': None,
     'dependencies': None
-}
-    
-
-class VectorBase:
-    """
-    A class to store and retrieve vectors.
-    
-    Attributes:
-        collection: The collection to store the vectors.
-        embedding_func: The embedding function to use to encode the text to a vector.
-    """
+    }
+    collection = None
+    embedding_func = None
     
     def __init__(self, vector_store_path: str, embedding_func):
-        # TODO: Implement vector store initialization
+        """
+        Example path format: "./chroma_db"
+        """
         client = chromadb.PersistentClient(path=vector_store_path)
         try:
             self.collection = client.get_collection("vector_store")
@@ -83,12 +89,12 @@ class VectorBase:
         text_embedding = self.embedding_func(text)
         # Check metadata format
         for key, value in metadata.items():
-            if key not in META_DATA_FORMAT:
+            if key not in self.META_DATA_FORMAT:
                 raise ValueError(f"Missing metadata key: {key}")
-            if isinstance(META_DATA_FORMAT[key], list):
-                if value not in META_DATA_FORMAT[key]:
+            if isinstance(self.META_DATA_FORMAT[key], list):
+                if value not in self.META_DATA_FORMAT[key]:
                     raise ValueError(f"Unsupported {key} value: {value}")
-            elif not isinstance(value, META_DATA_FORMAT[key]):
+            elif not isinstance(value, self.META_DATA_FORMAT[key]):
                 raise ValueError(f"Invalid {key} value type: {type(value)}")
             
         import hashlib
@@ -101,53 +107,17 @@ class VectorBase:
             metadata=metadata
         )
         
-    def update(self, file_path: str, file_name: str, text: str) -> None:
+    def delete(self, where: dict):
         """
-        Update the vector within the given file path.
+        Delete vectors from the vector store based on the where clause.
         
         Args:
-            file_path: The file path to update.
-            file_name: The file name to update.
-            text: The text to update.
-        
+            where: The where clause to filter the vectors to delete. Example: {"file_path": "path/to/file.py"}
+            
         Returns:
             None
         """
-        logger.info(f"Updating vector for file: {file_path}")
-        logger.warning("Dependency not implemented.")
-        assert os.path.exists(file_path), "File path does not exist."
-        assert os.path.isfile(file_path), "File path is not a file."
-        
-        processed_text = chunk_file(file_path)
-        
-        self._delete_by_path(file_path)
-        for chunk in processed_text:
-            metadata = {
-                "chunked_document": chunk["text"],
-                "file_name": file_name,
-                "file_path": file_path,
-                "line_number_start": chunk["line_number_start"],
-                "line_number_end": chunk["line_number_end"],
-                "file_type": chunk["file_type"],
-                "file_language": chunk["file_language"],
-                "function_type": chunk["function_type"],
-                "function_name": chunk["function_name"],
-                "dependencies": chunk["dependencies"]
-            }
-            self.insert(chunk["text"], metadata)
-        
-    
-    def _delete_by_path(self, file_path: str):
-        """
-        Delete all vectors with the given file path.
-        
-        Args:
-            file_path: The file path to delete.
-        
-        Returns:
-            None
-        """
-        self.collection.delete(where={"file_path": file_path})
+        self.collection.delete(where)
         
     def __len__(self):  
         return len(self.collection)
