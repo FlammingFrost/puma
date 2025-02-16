@@ -16,6 +16,9 @@ class VBRetriever:
         except NotImplementedError as e:
             print(f"Error initializing VectorBase: {e}, using DummyVB instead.")
             self.VB = DummyVB()
+        except Exception as e:
+            print(f"Error initializing VectorBase: {e}, using DummyVB instead.")
+            self.VB = DummyVB()
         
         self.top_k = config["vectorbase_top_k"]
         self.name = config.get("retriever_name", "VBRetriever")

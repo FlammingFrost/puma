@@ -2,7 +2,7 @@
 import chromadb
 import os
 
-from data_processing.chunker import chunk_file
+# from data_processing.chunker import chunk_file
 
 from tools.logger_config import logger
 
