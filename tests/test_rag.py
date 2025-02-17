@@ -39,11 +39,10 @@ def get_retrieval_unstructure(data):
     db = Database("tests/rag_db/chroma_db")
     data = [row for row in data if len(row['code']) <=4096]
     db.setup_vector_store(data)
-    for row in data:
-        query = row['docstring']
-        retrieved_chunks = db.retrieve(query)
-        retrieved_file_paths = [chunk['file_path'] for chunk in retrieved_chunks]
-        row['retrieved_file_paths'] = retrieved_file_paths
+    queries = [row['docstring'] for row in data]
+    retrievals = db.retrieve(queries)
+    for i in range(len(data)):
+        data[i]['retrieved_file_paths'] = [row['file_path'] for row in retrievals["metadatas"][i]]   
     
     return data
 
