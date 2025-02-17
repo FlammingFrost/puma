@@ -22,6 +22,8 @@ class ConfigLoader:
         # Override API key with environment variable if set
         OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
         CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
+        os.environ["OPENAI_API_KEY"] = config["openai"]["api_key"]
+        os.environ["CLAUDE_API_KEY"] = config["claude"]["api_key"]
         if OPENAI_API_KEY:
             config["openai"]["api_key"] = OPENAI_API_KEY
         if CLAUDE_API_KEY:
