@@ -34,7 +34,7 @@ class VectorBase:
         # TODO: Implement vector store initialization
         client = chromadb.PersistentClient(path=vector_store_path)
         try:
-            self.collection = client.get_collerction("vector_store")
+            self.collection = client.get_collection("vector_store")
         except chromadb.CollectionNotFoundError:
             self.collection = client.create_collection("vector_store")
             logger.info("VectorBase collection created.")

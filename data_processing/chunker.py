@@ -4,9 +4,10 @@ import json
 import yaml
 import toml
 from langchain.document_loaders import TextLoader, JSONLoader, UnstructuredMarkdownLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.text_splitter import Language, RecursiveCharacterTextSplitter
 from typing import List, Dict
 import re
+import ast
 
 # from tools.logger_config import logger
     
@@ -99,18 +100,25 @@ class Chunker():
         
         # If auto mode, determine best chunking strategy
         if self.chunk_type == "auto":
-            if file_extension in ["py", "java", "c", "cpp"]:
-                print("\n--- (Auto) Implementing Function Based Chunking ---")
-                return self.function_based_chunking(file_content, file_path)
+            if file_extension == "py":
+                print("\n--- (Auto) Implementing Python Chunking ---")
+                return self.code_chunking(file_content, file_path, Language.PYTHON)
+                # return self.split_python_by_functions(file_content, file_path)
+            elif file_extension == "java":
+                print("\n--- (Auto) Implementing Java Chunking ---")
+                return self.code_chunking(file_content, file_path, Language.JAVA)
+            elif file_extension in ["c", "cpp"]:
+                print("\n--- (Auto) Implementing C Chunking ---")
+                return self.code_chunking(file_content, file_path, Language.CSHARP)
             else:
                 print("\n--- (Auto) Implementing Recursive Chunking ---")
                 return self.recursive_chunking(file_content, file_path)
-
+                
         # Manual selection of chunking strategy
-        if self.chunk_type == "function":
-            return self.function_based_chunking(file_content, file_path)
-        else:
-            return self.recursive_chunking(file_content, file_path)
+        # if self.chunk_type == "function":
+        #     return self.function_based_chunking(file_content, file_path)
+        # else:
+        #     return self.recursive_chunking(file_content, file_path)
 
     def recursive_chunking(self, file_content: str, file_path: str) -> List[Dict]:
         """
@@ -119,60 +127,104 @@ class Chunker():
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
-            separators=["\n\n", "\n", " ", ""],  # Prefers splitting at paragraphs, then lines
+            separators=["\n\n", "\n", " ", ""], # first split at paragraphs, then lines, etc
         )
         chunks = text_splitter.split_text(file_content)
+        file_language = file_path.split(".")[-1]
+        file_type = "config" if file_language in ['json', 'yaml', 'yml', 'toml'] else "text"
 
         return [
             {
                 "chunked_document": chunk,
                 "file_path": file_path,
-                "file_type": "text",
-                "file_language": file_path.split(".")[-1],
+                "file_type": file_type,
+                "file_language": file_language,
             }
             for chunk in chunks
         ]
-
-    def function_based_chunking(self, file_content, file_path):
-        function_pattern = re.compile(r"^(\s*)?(def|class)\s+(\w+)\s*\(", re.MULTILINE)
+    
+    def code_chunking(self, file_content, file_path, language):
+        python_splitter = RecursiveCharacterTextSplitter.from_language(
+            language=language,
+            chunk_size=self.chunk_size, 
+            chunk_overlap=self.chunk_overlap
+        )
+        chunks = python_splitter.split_text(file_content)
         
-        chunks = []
-        last_pos = 0
-        last_match = None
-
-        for match in function_pattern.finditer(file_content):
-            start = match.start()
-
-            # If there's a previous match, store the previous function/class as a chunk
-            if last_match:
-                chunks.append({
-                    "file_path": file_path,
-                    "file_type": "code",
-                    "file_language": "py",
-                    "chunked_document": file_content[last_pos:start].strip(),
-                    "line_number_start": file_content[:last_pos].count("\n"),
-                    "line_number_end": file_content[:start].count("\n"),
-                    "function_name": last_match.group(3),  # Extract function/class name
-                    "function_type": "function" if last_match.group(2) == "def" else "class",
-                })
-
-            last_pos = start
-            last_match = match
-
-        # Add the last detected function/class
-        if last_match:
-            chunks.append({
+        return [
+            {
+                "chunked_document": chunk,
                 "file_path": file_path,
                 "file_type": "code",
                 "file_language": "py",
-                "chunked_document": file_content[last_pos:].strip(),
-                "line_number_start": file_content[:last_pos].count("\n"),
-                "line_number_end": file_content.count("\n"),
-                "function_name": last_match.group(3),
-                "function_type": "function" if last_match.group(2) == "def" else "class",
-            })
+            }
+            for chunk in chunks
+        ]
+    
+    # AST Approach
+    
+    # def split_python_by_functions(self, file_content, file_path):
+    #     tree = ast.parse(file_content)
+    #     chunks = []
+        
+    #     for node in tree.body:
+    #         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+    #             start_line = node.lineno - 1
+    #             end_line = node.end_lineno if hasattr(node, "end_lineno") else start_line + 1
+    #             chunk = "\n".join(file_content.splitlines()[start_line:end_line])
+    #             chunks.append(chunk)
+        
+    #     return [
+    #         {
+    #             "chunked_document": chunk,
+    #             "file_path": file_path,
+    #             "file_type": "code",
+    #             "file_language": "py",
+    #         }
+    #         for chunk in chunks
+    #     ]
+        
 
-        return chunks
+    # def function_based_chunking(self, file_content, file_path):
+    #     function_pattern = re.compile(r"^(\s*)?(def|class)\s+(\w+)\s*\(", re.MULTILINE)
+        
+    #     chunks = []
+    #     last_pos = 0
+    #     last_match = None
+
+    #     for match in function_pattern.finditer(file_content):
+    #         start = match.start()
+
+    #         # If there's a previous match, store the previous function/class as a chunk
+    #         if last_match:
+    #             chunks.append({
+    #                 "file_path": file_path,
+    #                 "file_type": "code",
+    #                 "file_language": "py",
+    #                 "chunked_document": file_content[last_pos:start].strip(),
+    #                 "line_number_start": file_content[:last_pos].count("\n"),
+    #                 "line_number_end": file_content[:start].count("\n"),
+    #                 "function_name": last_match.group(3),  # Extract function/class name
+    #                 "function_type": "function" if last_match.group(2) == "def" else "class",
+    #             })
+
+    #         last_pos = start
+    #         last_match = match
+
+    #     # Add the last detected function/class
+    #     if last_match:
+    #         chunks.append({
+    #             "file_path": file_path,
+    #             "file_type": "code",
+    #             "file_language": "py",
+    #             "chunked_document": file_content[last_pos:].strip(),
+    #             "line_number_start": file_content[:last_pos].count("\n"),
+    #             "line_number_end": file_content.count("\n"),
+    #             "function_name": last_match.group(3),
+    #             "function_type": "function" if last_match.group(2) == "def" else "class",
+    #         })
+
+    #     return chunks
     
     
 ### **TEST CHUNKING FUNCTION**
@@ -182,6 +234,7 @@ def test_chunking():
     test_files = [
         "tests/data/test_chunking/example.py",   # Python file
         "tests/data/test_chunking/example.java", # Java file
+        "tests/data/test_chunking/example.cpp", # C++ file
         "tests/data/test_chunking/example.md",   # Markdown file
         "tests/data/test_chunking/example.txt",  # Plain text
         "tests/data/test_chunking/example.yaml", # YAML config

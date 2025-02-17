@@ -12,15 +12,11 @@ class VBRetriever:
                 
         """
         try:
-            selVB = VectorBase()
+            self.VB = VectorBase()
         except NotImplementedError as e:
             print(f"Error initializing VectorBase: {e}, using DummyVB instead.")
             self.VB = DummyVB()
-<<<<<<< HEAD
-        except TypeError as e:
-=======
         except Exception as e:
->>>>>>> origin/main
             print(f"Error initializing VectorBase: {e}, using DummyVB instead.")
             self.VB = DummyVB()
         
