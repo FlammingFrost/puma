@@ -137,7 +137,7 @@ class Database:
         )
         
 
-    def retrieve(self, query: str) -> list[dict]:
+    def retrieve(self, query: str|list[str]) -> list[dict]:
         """
         Retrieve top k vectors from the vector store based on the query.
         
@@ -206,8 +206,17 @@ class Database:
             list: The embedding for the given text.
         """
         import openai
+        from time import sleep
         client = openai.Client(api_key=config["openai"]["api_key"])
         # TODO: handle too long text
+        if len(text) > 500:
+            split_text = [text[i:i + 500] for i in range(0, len(text), 500)]
+            response = []
+            for t in split_text:
+                sleep(0.1)
+                # import pdb; pdb.set_trace()
+                response.extend(client.embeddings.create(model=model, input=t).data)
+            return [res.embedding for res in response]
         response = client.embeddings.create(model=model, input=text)
         
         return [res.embedding for res in response.data]
