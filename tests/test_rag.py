@@ -1,9 +1,12 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+
 from tests.load_data import load_data_python
 from embedding.database import Database
 from query_engine.retriever import VBRetriever
-import os
-
-TOP_K = 5
 
 file_path_python = "tests/data/python/python_train_0.jsonl.gz"
 file_with_query = "tests/data/python/python_with_query.jsonl.gz"
@@ -31,9 +34,12 @@ def get_retrieval_unstructure(data):
     Returns:
         Database: The database object.
     """
-    db = Database("tests/rag_db/chroma_db", None)
+    import openai
+    
+    
+    db = Database("tests/rag_db/chroma_db")
     db.initialize(data)
-    rag_sys = VBRetriever(TOP_K)
+    rag_sys = VBRetriever()
     for row in data:
         query = row['query']
         retrieved_chunks = rag_sys.retrieve_relevant_chunks(query)
@@ -72,7 +78,8 @@ def main():
         data_python = load_data_python(file_with_query, num_rows=100)
     else:
         data_python_raw = load_data_python(file_path_python, num_rows=100)
-        data_python = generate_query(data_python_raw, num_rows=100, seed=224)
+        data_python = data_python_raw
+        # data_python = generate_query(data_python_raw, num_rows=100, seed=224)
         
     data = get_retrieval_unstructure(data_python)
     accuracy = cal_accuracy(data)

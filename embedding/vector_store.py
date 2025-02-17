@@ -41,7 +41,7 @@ class VectorBase:
         client = chromadb.PersistentClient(path=vector_store_path)
         try:
             self.collection = client.get_collection("vector_store")
-        except chromadb.CollectionNotFoundError:
+        except Exception as e:
             self.collection = client.create_collection("vector_store")
             logger.info("VectorBase collection created.")
         logger.info("VectorBase initialized.")
@@ -74,7 +74,7 @@ class VectorBase:
         
         return query_result
     
-    def insert(self, text: str, metadata: dict):
+    def insert(self, text: str, metadata: dict, match = False):
         """
         Insert a new vector to the vector store.
         
@@ -88,23 +88,28 @@ class VectorBase:
         """
         text_embedding = self.embedding_func(text)
         # Check metadata format
-        for key, value in metadata.items():
-            if key not in self.META_DATA_FORMAT:
-                raise ValueError(f"Missing metadata key: {key}")
-            if isinstance(self.META_DATA_FORMAT[key], list):
-                if value not in self.META_DATA_FORMAT[key]:
-                    raise ValueError(f"Unsupported {key} value: {value}")
-            elif not isinstance(value, self.META_DATA_FORMAT[key]):
-                raise ValueError(f"Invalid {key} value type: {type(value)}")
+        if match:
+            for key, value in metadata.items():
+                if key not in self.META_DATA_FORMAT:
+                    # raise ValueError(f"Missing metadata key: {key}")
+                    continue
+                if isinstance(self.META_DATA_FORMAT[key], list):
+                    if type(value) not in self.META_DATA_FORMAT[key]:
+                        raise ValueError(f"Unsupported {key} value: {type(value)}")
+                elif not isinstance(value, self.META_DATA_FORMAT[key]):
+                    raise ValueError(f"Invalid {key} value type: {type(value)}, value: {value}")
+        for key in self.META_DATA_FORMAT.keys():
+            if key not in metadata:
+                metadata[key] = ''
             
         import hashlib
         id_str = f"{metadata['file_path']}:{metadata['line_number_start']}-{metadata['line_number_end']}"
         metadata['id'] = hashlib.md5(id_str.encode()).hexdigest()
         
-        self.collection.insert(
-            text=text,
-            text_embeddings=text_embedding,
-            metadata=metadata
+        self.collection.add(
+            ids=metadata['id'],
+            embeddings=text_embedding,
+            metadatas=metadata
         )
         
     def delete(self, where: dict):
@@ -119,8 +124,8 @@ class VectorBase:
         """
         self.collection.delete(where)
         
-    def __len__(self):  
-        return len(self.collection)
+    def __len__(self):
+        return self.collection.count()
     
     def __str__(self):
         return "VectorBase"
