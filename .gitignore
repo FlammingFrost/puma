@@ -27,6 +27,7 @@ cache/
 # Vector database files
 tests/rag_db/
 
+
 # Large model files (if downloaded)
 models/
 
@@ -51,6 +52,7 @@ package-lock.json
 # VS Code settings
 .vscode/
 *.code-workspace
+
 
 # JetBrains IDE (PyCharm) settings
 .idea/
