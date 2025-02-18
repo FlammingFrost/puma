@@ -1,0 +1,7 @@
+[config]
+setting1 = true
+setting2 = false
+
+[database]
+user = "admin"
+password = "secret"

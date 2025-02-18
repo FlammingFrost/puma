@@ -1,0 +1,5 @@
+This is a simple text file.
+
+It contains multiple paragraphs.
+
+Each paragraph is separated by a newline.
