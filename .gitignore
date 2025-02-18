@@ -30,7 +30,8 @@ api_key.yaml
 # Cache files
 cache/
 # Vector database files
-storage/
+tests/data/
+tests/rag_db
 
 # Large model files (if downloaded)
 models/
@@ -59,9 +60,6 @@ package-lock.json
 # VS Code settings
 .vscode/
 *.code-workspace
-
-# JetBrains IDE (PyCharm) settings
-.idea/
 
 # Python packaging files
 *.egg-info/
