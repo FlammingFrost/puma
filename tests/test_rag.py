@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from tests.load_data import load_data_python
 from embedding.database import Database
-from query_engine.retriever import VBRetriever
+from tools.logger import logger
 
 file_path_python = "tests/data/python/python_train_0.jsonl.gz"
 file_with_query = "tests/data/python/python_with_query.jsonl.gz"
@@ -38,13 +38,14 @@ def get_retrieval_unstructure(data):
     
     
     db = Database("tests/rag_db/chroma_db")
-    db.initialize(data)
-    rag_sys = VBRetriever()
-    for row in data:
-        query = row['query']
-        retrieved_chunks = rag_sys.retrieve_relevant_chunks(query)
-        retrieved_file_paths = [chunk['file_path'] for chunk in retrieved_chunks]
-        row['retrieved_file_paths'] = retrieved_file_paths
+    clip_data = [row for row in data if len(row['code']) <=4096]
+    logger.info(f"Inserting {len(clip_data)} vectors to the vector store. Before clip: {len(data)}")
+    data = clip_data
+    db.setup_vector_store(data)
+    queries = [row['docstring'] for row in data]
+    retrievals = db.retrieve(queries)
+    for i in range(len(data)):
+        data[i]['retrieved_file_paths'] = [row['file_path'] for row in retrievals["metadatas"][i]]   
     
     return data
 
@@ -77,7 +78,7 @@ def main():
     if os.path.exists(file_with_query):
         data_python = load_data_python(file_with_query, num_rows=100)
     else:
-        data_python_raw = load_data_python(file_path_python, num_rows=100)
+        data_python_raw = load_data_python(file_path_python, num_rows=10000)
         data_python = data_python_raw
         # data_python = generate_query(data_python_raw, num_rows=100, seed=224)
         
