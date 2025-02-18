@@ -4,12 +4,7 @@ __pycache__/
 *$py.class
 
 # Virtual environments
-.env/
-.venv/
 venv/
-Pipfile
-Pipfile.lock
-poetry.lock
 
 # Jupyter Notebook checkpoints (if used for testing)
 .ipynb_checkpoints/
@@ -30,14 +25,10 @@ api_key.yaml
 # Cache files
 cache/
 # Vector database files
-storage/
 tests/rag_db/
 
 # Large model files (if downloaded)
 models/
-*.h5
-*.pt
-*.onnx
 
 # FastAPI / Web Server artifacts
 *.sqlite3
@@ -63,21 +54,6 @@ package-lock.json
 
 # JetBrains IDE (PyCharm) settings
 .idea/
-
-# Python packaging files
-*.egg-info/
-*.egg
-.eggs/
-
-# Testing / coverage reports
-.coverage
-coverage.xml
-htmlcov/
-pytest_cache/
-
-# Black & Mypy static analysis
-.mypy_cache/
-.black/
 
 # Ignore temporary files
 tmp/
