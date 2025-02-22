@@ -1,3 +1,5 @@
+import sys
+import os
 import torch
 import faiss
 import numpy as np
@@ -9,7 +11,11 @@ from sentence_transformers import (
 )
 from sentence_transformers.training_args import BatchSamplers
 from datasets import Dataset
-# from data_processing.negative_example_generator import NegativeExampleGenerator
+from data_processing.negative_example_generator import NegativeExampleGenerator
+from tools.logger import logger
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 
 class Embedder:
     def __init__(self, base_model="jinaai/jina-embeddings-v2-base-code", fine_tuned_model=None):
@@ -43,7 +49,7 @@ class Embedder:
         else:
             negatives = negative_generator.get_random_negative(queries, positives)
 
-        # 3. Convert data into a Hugging Face Dataset (WITHOUT using InputExample)
+        # Convert data into a Hugging Face Dataset (WITHOUT using InputExample)
         train_dataset = Dataset.from_dict({
             "anchor": queries,  # Renamed to match SentenceTransformer's triplet format
             "positive": positives,
@@ -79,7 +85,7 @@ class Embedder:
         
         
         # Create a trainer & train
-        print("Starting fine-tuning with contrastive learning...")
+        logger.info("Starting fine-tuning with contrastive learning...")
         trainer = SentenceTransformerTrainer(
             model=self.model,
             args=args,
@@ -91,14 +97,14 @@ class Embedder:
         trainer.train()
 
         self.model.save_pretrained(save_path)
-        print(f"Fine-tuned model saved at: {save_path}")
+        logger.info(f"Fine-tuned model saved at: {save_path}")
 
     def load_fine_tuned_model(self, model_path="fine_tuned_jina_embeddings"):
         """
         Load a fine-tuned embedding model.
         """
         self.model = SentenceTransformer(model_path).to(self.device)
-        print(f"Loaded fine-tuned model from {model_path}")
+        logger.info(f"Loaded fine-tuned model from {model_path}")
 
     def build_faiss_index(self, code_snippets):
         """
@@ -108,7 +114,7 @@ class Embedder:
         self.index = faiss.IndexFlatL2(code_embeddings.shape[1])
         self.index.add(code_embeddings)
         self.snippets = code_snippets
-        print("FAISS index built successfully.")
+        logger.info("FAISS index built successfully.")
 
     def retrieve_similar_code(self, query, top_k=2):
         """
@@ -127,14 +133,14 @@ def test_encoding():
     embedder = Embedder()
     texts = ["def add(a, b): return a + b", "def subtract(a, b): return a - b"]
     embeddings = embedder.encode(texts)
-    print(embeddings.shape)
-    print(embeddings)
+    logger.info(embeddings.shape)
+    logger.info(embeddings)
     
     assert isinstance(embeddings, np.ndarray), "Encoding should return a NumPy array"
     assert embeddings.shape[0] == len(texts), "Embeddings should match the number of input texts"
     assert embeddings.shape[1] > 0, "Embeddings should have a valid dimension"
 
-    print("Encoding test passed!")
+    logger.info("Encoding test passed!")
     
 if __name__ == "__main__":
     test_encoding()
