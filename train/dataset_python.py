@@ -3,7 +3,8 @@ import json
 import random
 from tqdm import tqdm
 
-import sys, os
+import sys
+import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from tools.logger import logger
