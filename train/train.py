@@ -11,7 +11,7 @@ from sentence_transformers.training_args import BatchSamplers
 from datasets import Dataset
 # from torch.utils.data import DataLoader
 from train.negative_example_generator import NegativeExampleGenerator
-
+from dataset_python import PythonDataset
 from tools.logger import logger
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -21,10 +21,15 @@ class SentenceBERTFineTuner:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = SentenceTransformer(model_name, trust_remote_code=True).to(self.device)
 
-    def train(self, train_data, use_hard_negatives=True, train_epochs=3, batch_size=8, save_path="models/fine_tuned_embedder"):
+    def train(self, train_dataset, use_hard_negatives=True, train_epochs=3, batch_size=8, save_path="models/fine_tuned_embedder"):
         """
         Fine-tune the SentenceTransformer model using contrastive learning.
         """
+        
+        
+        """
+        --- Original code ---
+        --- Now uses dataset from train/dataset_python.py ---
         # Extract positive examples from train_data
         queries = [item["query"] for item in train_data]
         positives = [item["positive"] for item in train_data]
@@ -42,7 +47,7 @@ class SentenceBERTFineTuner:
             "positive": positives,
             "negative": negatives
         })
-
+"""
         # Define Loss functions
         # https://www.sbert.net/docs/sentence_transformer/loss_overview.html
         loss = losses.MultipleNegativesRankingLoss(self.model)
@@ -95,4 +100,5 @@ if __name__ == "__main__":
     ]
     
     fine_tuner = SentenceBERTFineTuner()
-    fine_tuner.train(train_data)
+    train_dataset = PythonDataset("tests/data/python/python_train_0.jsonl.gz")
+    fine_tuner.train(train_dataset)

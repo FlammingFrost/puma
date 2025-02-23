@@ -9,6 +9,9 @@ openai
 langchain-openai
 langchain-anthropic
 
+sentence_transformers
+datasets
+
 pytest
 pytest-asyncio
 mypy
