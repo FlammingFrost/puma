@@ -2,6 +2,7 @@ import gzip
 import json
 import random
 from tqdm import tqdm
+from datasets import Dataset
 
 import sys
 import os
@@ -12,7 +13,7 @@ from tools.logger import logger
 KEEP_KEYS = ["docstring", "code", "func_name", "language", "file_path"]
 PythonDataPath = "tests/data/python/python_train_0.jsonl.gz"
 
-class PythonDataset:
+class PythonDataset(Dataset):
     """
     A custom dataset for loading Python code and docstrings from a JSONL file.
     
@@ -43,6 +44,7 @@ class PythonDataset:
     }
     """
     def __init__(self, folder_path, seed=224, negative_triplets=False, negative_precomputed=False, subset='train'):
+        # super(PythonDataset, self).__init__()
         self.seed = seed
         self.codes = None
         self.negative_triplets = negative_triplets
@@ -93,16 +95,10 @@ class PythonDataset:
         return self._data
 
     def __getitem__(self, idx):
-        if self.negative_triplets:
-            if self.negative_precomputed:
-                return self._data[idx]
-            else:
-                record = self._data[idx]
-                while record['negative'] is None or record['negative'] == record['positive']:
-                    record['negative'] = random.choice(self.codes)
-                return record
+        if isinstance(idx, list):
+            return [self.data[i] for i in idx]
         else:
-            return self._data[idx]
+            return self.data[idx]
 
     def to_hf_dataset(self):
         from datasets import Dataset

@@ -1,7 +1,8 @@
 import sys
 import os
 import torch
-import faiss
+# import faiss
+import torch.nn as nn
 import numpy as np
 from sentence_transformers import (
     SentenceTransformer,
@@ -14,35 +15,58 @@ from tools.logger import logger
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tools.logger import logger
 
+class MLPEmbedder(nn.Module):
+    """
+    Class for defining the MLP transformation layer to map query embedding closer to code embedding.
+    """
+    def __init__(self, input_dim=768, hidden_dim=512, output_dim=768, base_model="jinaai/jina-embeddings-v2-base-code", fine_tuned_model=None, device="cuda"):
+        super(MLPEmbedder, self).__init__()
+        self.embedder = Embedder(base_model, fine_tuned_model)
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_dim, output_dim)
+        self.device = device
 
-class Embedder:
+    def forward(self, query):
+        embedding = self.embedder(query)
+        embedding = torch.tensor(embedding).to(self.device)
+        return self.fc2(self.relu(self.fc1(embedding)))
+    
+    def to(self, device):
+        self.device = device
+        self.embedder.to(device)
+        return self
+    
+    def train(self)-> None:
+        for param in self.embedder.parameters():
+            param.requires_grad = False
+        for layer in [self.fc1, self.fc2]:
+            for param in layer.parameters():
+                param.requires_grad = True
+                
+    def eval(self):
+        for param in self.parameters():
+            param.requires_grad = False
+
+class Embedder(nn.Module):
+    """
+    Class for loading a pre-trained Sentence Transformer model.
+    """
     def __init__(self, base_model="jinaai/jina-embeddings-v2-base-code", fine_tuned_model=None):
-        """
-        Initialize the embedder with a pre-trained model or a fine-tuned model.
-        """
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        super(Embedder, self).__init__()
         self.model = SentenceTransformer(
             fine_tuned_model if fine_tuned_model else base_model, 
-            trust_remote_code=True).to(self.device)
+            trust_remote_code=True)
         logger.info(f"Loaded model: {fine_tuned_model if fine_tuned_model else base_model}")
         self.index = None
 
-    def encode(self, texts):
-        """
-        Encode a list of code snippets or queries.
-        """
-        return np.array(self.model.encode(texts, convert_to_numpy=True))
-
-    def load_fine_tuned_model(self, model_path="fine_tuned_jina_embeddings"):
-        """
-        Load a fine-tuned embedding model.
+    def forward(self, query):
+        return self.model.encode(query)
         
-        Args:
-            model_path (str): Path to the fine-tuned model.
-
-        """
-        self.model = SentenceTransformer(model_path).to(self.device)
-        logger.info(f"Loaded fine-tuned model from {model_path}")
+    def to(self, device):
+        self.device = device
+        self.model.to(device)
+        return self
 
     # def build_faiss_index(self, code_snippets):
     #     """

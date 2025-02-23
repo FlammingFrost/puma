@@ -15,7 +15,7 @@ from dataset_python import PythonDataset
 from tools.logger import logger
 
 
-def fine_tune_sentence_bert(model_name="jinaai/jina-embeddings-v2-base-code", train_dataset=None, use_hard_negatives=True, train_epochs=3, batch_size=8, save_path="models/fine_tuned_embedder"):
+def finetune_embedder(model_name="jinaai/jina-embeddings-v2-base-code", train_dataset=None, use_hard_negatives=True, train_epochs=3, batch_size=8, save_path="models/fine_tuned_embedder"):
     """
     Fine-tune the SentenceTransformer model using contrastive learning.
     """
@@ -56,35 +56,22 @@ def fine_tune_sentence_bert(model_name="jinaai/jina-embeddings-v2-base-code", tr
     model.save_pretrained(save_path)
     logger.info(f"Fine-tuned model saved at: {save_path}")
 
-def train_embedder(model, train_dataset, train_epochs=3, batch_size=8, save_path="models/fine_tuned_jina_embeddings"):
+def finetune_embedder(model_name="jinaai/jina-embeddings-v2-base-code", train_dataset=None, use_hard_negatives=True, train_epochs=3, batch_size=8, save_path="models/fine_tuned_embedder"):
     """
-    Fine-tune the embedder using contrastive learning.
+    Fine-tune the SentenceTransformer model using contrastive learning.
     """
-    
-    '''
-    --- Original code ---
-    --- Now we should modify dataset to switch between hard negatives and random negatives ---
-    # Extract positive examples from train_dataset
-    queries = train_dataset["query"]
-    positives = train_dataset["positive"]
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = SentenceTransformer(model_name, trust_remote_code=True).to(device)
 
-    # Generate negative examples
-    negative_generator = NegativeExampleGenerator()
-    if use_hard_negatives:
-        negatives = negative_generator.get_semantic_hard_negatives(queries, positives, positives + queries, model)
-    else:
-        negatives = negative_generator.get_random_negative(queries, positives)
-
-    # Convert data into a Hugging Face Dataset (WITHOUT using InputExample)
-    train_dataset = Dataset.from_dict({
-        "anchor": queries,  # Renamed to match SentenceTransformer's triplet format
-        "positive": positives,
-        "negative": negatives
-    })
-    '''
-    # Loss functions:
+    # Define Loss functions
     loss = losses.MultipleNegativesRankingLoss(model)
-    
+
+    # Convert train_dataset to Dataset object if it's not already
+    if isinstance(train_dataset, PythonDataset):
+        train_dataset = train_dataset.to_hf_dataset()
+
+    # Train model
+    logger.info("Starting fine-tuning...")
     args = SentenceTransformerTrainingArguments(
         output_dir="models/",
         num_train_epochs=train_epochs,
@@ -105,9 +92,11 @@ def train_embedder(model, train_dataset, train_epochs=3, batch_size=8, save_path
         loss=loss,
     )
     trainer.train()
-
+    
+    os.makedirs(save_path, exist_ok=True)
     model.save_pretrained(save_path)
     logger.info(f"Fine-tuned model saved at: {save_path}")
+
 
 # Example Usage
 if __name__ == "__main__": 
