@@ -5,8 +5,6 @@ import faiss
 import numpy as np
 from sentence_transformers import (
     SentenceTransformer,
-    SentenceTransformerTrainer,
-    SentenceTransformerTrainingArguments,
     losses
 )
 from sentence_transformers.training_args import BatchSamplers
@@ -14,6 +12,7 @@ from datasets import Dataset
 from tools.logger import logger
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from tools.logger import logger
 
 
 class Embedder:
@@ -25,6 +24,7 @@ class Embedder:
         self.model = SentenceTransformer(
             fine_tuned_model if fine_tuned_model else base_model, 
             trust_remote_code=True).to(self.device)
+        logger.info(f"Loaded model: {fine_tuned_model if fine_tuned_model else base_model}")
         self.index = None
 
     def encode(self, texts):
@@ -60,19 +60,28 @@ class Embedder:
     #     """
     #     if self.index is None:
     #         raise ValueError("FAISS index not built. Call `build_faiss_index()` first.")
+    # def retrieve_similar_code(self, query, top_k=2):
+    #     """
+    #     Retrieve top_k similar code snippets given a query.
+    #     """
+    #     if self.index is None:
+    #         raise ValueError("FAISS index not built. Call `build_faiss_index()` first.")
 
+    #     query_embedding = self.encode([query])
+    #     D, I = self.index.search(query_embedding, k=top_k)
     #     query_embedding = self.encode([query])
     #     D, I = self.index.search(query_embedding, k=top_k)
 
     #     return [self.snippets[idx] for idx in I[0]]
+    #     return [self.snippets[idx] for idx in I[0]]
     
 
 def test_encoding():
-    embedder = Embedder()
+    embedder = Embedder(fine_tuned_model="models/fine_tuned_embedder")
     texts = ["def add(a, b): return a + b", "def subtract(a, b): return a - b"]
     embeddings = embedder.encode(texts)
-    logger.info(embeddings.shape)
-    logger.info(embeddings)
+    print(embeddings.shape)
+    print(embeddings)
     
     assert isinstance(embeddings, np.ndarray), "Encoding should return a NumPy array"
     assert embeddings.shape[0] == len(texts), "Embeddings should match the number of input texts"
