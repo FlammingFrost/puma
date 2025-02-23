@@ -7,6 +7,9 @@ from sentence_transformers import (
     SentenceTransformer,
     losses
 )
+from sentence_transformers.training_args import BatchSamplers
+from datasets import Dataset
+from tools.logger import logger
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tools.logger import logger
@@ -29,30 +32,18 @@ class Embedder:
         Encode a list of code snippets or queries.
         """
         return np.array(self.model.encode(texts, convert_to_numpy=True))
-    
-    def calculate_similarity(self, test_data):
-        """
-        Calculate cosine similarity between queries and positive examples in the test data.
-        """
-        queries = [item["query"] for item in test_data]
-        positives = [item["positive"] for item in test_data]
-        
-        query_embeddings = torch.tensor(self.encode(queries), dtype=torch.float32)
-        positive_embeddings = torch.tensor(self.encode(positives), dtype=torch.float32)
 
-        similarities = torch.nn.functional.cosine_similarity(query_embeddings, positive_embeddings, dim=1)
-        
-        return similarities
-    
-    def transform_query(self, query_embeddings):
+    def load_fine_tuned_model(self, model_path="fine_tuned_jina_embeddings"):
         """
-        Transform queries using a simple neural network to make query and code in the same space.
+        Load a fine-tuned embedding model.
+        
+        Args:
+            model_path (str): Path to the fine-tuned model.
+
         """
-        
-        
-        
-        return query_embeddings
-    
+        self.model = SentenceTransformer(model_path).to(self.device)
+        logger.info(f"Loaded fine-tuned model from {model_path}")
+
     # def build_faiss_index(self, code_snippets):
     #     """
     #     Build a FAISS index for fast retrieval of code snippets.
@@ -69,10 +60,19 @@ class Embedder:
     #     """
     #     if self.index is None:
     #         raise ValueError("FAISS index not built. Call `build_faiss_index()` first.")
+    # def retrieve_similar_code(self, query, top_k=2):
+    #     """
+    #     Retrieve top_k similar code snippets given a query.
+    #     """
+    #     if self.index is None:
+    #         raise ValueError("FAISS index not built. Call `build_faiss_index()` first.")
 
     #     query_embedding = self.encode([query])
     #     D, I = self.index.search(query_embedding, k=top_k)
+    #     query_embedding = self.encode([query])
+    #     D, I = self.index.search(query_embedding, k=top_k)
 
+    #     return [self.snippets[idx] for idx in I[0]]
     #     return [self.snippets[idx] for idx in I[0]]
     
 

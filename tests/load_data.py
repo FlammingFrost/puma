@@ -4,12 +4,12 @@ import random
 
 KEEP_KEYS = ["docstring", "code", "func_name", "language", "file_path"]
 
-def load_data_python(file_path, num_rows=None, seed=224):
+def load_data_python(folder_path, num_rows=None, seed=224):
     """
     Load local Python data from a JSONL file. Use as test data for RAG model.
     
     Args:
-        file_path (str): Path to the JSONL file.
+        folder_path (str): Path to the folder containing the JSONL file.
         keep_keys (list): List of keys to keep.
         num_rows (int): Number of rows to sample.
         seed (int): Random seed for reproducibility. Default is 224.
@@ -25,14 +25,15 @@ def load_data_python(file_path, num_rows=None, seed=224):
     total_tokens = 0
     total_records = 0
     data = []
-
-    with gzip.open(file_path, "rt", encoding="utf-8") as f:
-        for line in f:
-            row = json.loads(line)  # Parse each JSON line
-            row['file_path'] = row['repo'] + '/' + row['path'][4:]
-            data.append({k: v for k, v in row.items() if k in KEEP_KEYS})
-            total_records += 1
-            total_tokens += len(row["code_tokens"])
+    file_names = os.listdir(folder_path)
+    for file_name in file_names:
+        with gzip.open(file_name, "rt", encoding="utf-8") as f:
+            for line in f:
+                row = json.loads(line)  # Parse each JSON line
+                row['file_path'] = row['repo'] + '/' + row['path'][4:]
+                data.append({k: v for k, v in row.items() if k in KEEP_KEYS})
+                total_records += 1
+                total_tokens += len(row["code_tokens"])
 
     if seed is not None:
         random.seed(seed)
