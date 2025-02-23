@@ -7,6 +7,8 @@ from sentence_transformers import (
     SentenceTransformer,
     losses
 )
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tools.logger import logger
 
 
@@ -34,9 +36,11 @@ class Embedder:
         """
         queries = [item["query"] for item in test_data]
         positives = [item["positive"] for item in test_data]
-        query_embeddings = self.encode(queries)
-        positive_embeddings = self.encode(positives)
-        similarities = np.dot(query_embeddings, positive_embeddings.T) / (np.linalg.norm(query_embeddings) * np.linalg.norm(positive_embeddings))
+        
+        query_embeddings = torch.tensor(self.encode(queries), dtype=torch.float32)
+        positive_embeddings = torch.tensor(self.encode(positives), dtype=torch.float32)
+
+        similarities = torch.nn.functional.cosine_similarity(query_embeddings, positive_embeddings, dim=1)
         
         return similarities
     

@@ -9,7 +9,8 @@ from sentence_transformers import (
 )
 from sentence_transformers.training_args import BatchSamplers
 from datasets import Dataset
-# from torch.utils.data import DataLoader
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from train.negative_example_generator import NegativeExampleGenerator
 from dataset_python import PythonDataset
 from tools.logger import logger
@@ -96,7 +97,7 @@ class SentenceBERTFineTuner:
         
         os.makedirs(save_path, exist_ok=True)
         self.model.save_pretrained(save_path)
-        # logger.info(f"Fine-tuned model saved at: {save_path}")
+        logger.info(f"Fine-tuned model saved at: {save_path}")
 
 # Example Usage
 if __name__ == "__main__":
