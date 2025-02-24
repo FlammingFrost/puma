@@ -4,50 +4,49 @@ import torch
 # import faiss
 import torch.nn as nn
 import numpy as np
-from sentence_transformers import (
-    SentenceTransformer,
-    losses
-)
-from sentence_transformers.training_args import BatchSamplers
-from datasets import Dataset
-from tools.logger import logger
-from transformers import AutoModel, AutoTokenizer
+
+import torch.nn.functional as F
+
+from transformers import AutoModel
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tools.logger import logger
+
+def mean_pooling(model_output, attention_mask):
+    token_embeddings = model_output[0]
+    input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+    return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+
 
 class MLPEmbedder(nn.Module):
     """
     Class for defining the MLP transformation layer to map query embedding closer to code embedding.
     """
-    def __init__(self, input_dim=768, hidden_dim=512, output_dim=768, base_model="jinaai/jina-embeddings-v2-base-code", fine_tuned_model=None, device="cuda"):
+    def __init__(self, base_model, input_dim=768, hidden_dim=512, output_dim=768 ):
         super(MLPEmbedder, self).__init__()
-        self.embedder = Embedder(base_model if not fine_tuned_model else fine_tuned_model)
+        self.embedder = base_model
         self.fc1 = nn.Linear(input_dim, hidden_dim)
         self.relu = nn.ReLU()
         self.fc2 = nn.Linear(hidden_dim, output_dim)
-        self.device = device
 
-    def forward(self, query):
-        embedding = self.embedder(query)
-        embedding = torch.tensor(embedding).to(self.device)
-        return self.fc2(self.relu(self.fc1(embedding)))
-    
-    def to(self, device):
-        self.device = device
-        self.embedder.to(device)
-        return self
-    
-    def train(self)-> None:
+    def forward(self, input_enc):
+        base_emb = self.embedder(input_enc)
+        mapped_emb = self.fc2(self.relu(self.fc1(base_emb)))
+        return mapped_emb
+
+    def train(self, mode=True):
+        """
+        Override the default train() to freeze the base model's layers.
+        """
+        super(MLPEmbedder, self).train(mode)
+        self.embedder.eval()  # Freeze the base model
         for param in self.embedder.parameters():
             param.requires_grad = False
-        for layer in [self.fc1, self.fc2]:
-            for param in layer.parameters():
-                param.requires_grad = True
-                
-    def eval(self):
-        for param in self.parameters():
-            param.requires_grad = False
+        for param in self.fc1.parameters():
+            param.requires_grad = mode
+        for param in self.fc2.parameters():
+            param.requires_grad = mode
+        
 
 class Embedder(nn.Module):
     """
@@ -55,31 +54,34 @@ class Embedder(nn.Module):
     """
     def __init__(self, model_name="jinaai/jina-embeddings-v2-base-code"):
         super(Embedder, self).__init__()
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModel.from_pretrained(model_name)
-        logger.info(f"Loaded model: {model_name}")
+        self.model = AutoModel.from_pretrained('jinaai/jina-embeddings-v2-base-code', trust_remote_code=True)
+        logger.info(f"Embedder loaded model: {model_name}")
 
-    def forward(self, text):
-        inputs = self.tokenizer(text, return_tensors='pt', padding=True, truncation=True)
-        outputs = self.model(**inputs)
-        embeddings = outputs.last_hidden_state.mean(dim=1)  # Mean pooling
+    def forward(self, input_enc):
+        outputs = self.model(**input_enc)
+        embeddings = mean_pooling(outputs, input_enc['attention_mask'])
+        embeddings = F.normalize(embeddings, p=2, dim=1)
         return embeddings
 
-    def to(self, device):
-        self.device = device
-        self.model.to(device)
-        return self
 
 # Example usage
 def test_encoding():
-    embedder = Embedder(model_name="jinaai/jina-embeddings-v2-base-code")
-    texts = ["def add(a, b): return a + b", "def subtract(a, b): return a - b"]
-    embeddings = embedder(texts)
+    from transformers import AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained("jinaai/jina-embeddings-v2-base-code")
+    base_model = Embedder(model_name="jinaai/jina-embeddings-v2-base-code")
+    embedder = MLPEmbedder(input_dim=768, hidden_dim=512, output_dim=768, base_model=base_model)
+    
+    input = ["def add(a, b): return a + b", "def subtract(a, b): return a - b"]
+    input_enc = tokenizer(input, return_tensors='pt', padding='max_length', truncation=True, max_length=512)
+    
+    with torch.no_grad():
+        embeddings = embedder(input_enc)
+        
+    
     print(embeddings.shape)
     print(embeddings)
-    
     assert isinstance(embeddings, torch.Tensor), "Encoding should return a PyTorch tensor"
-    assert embeddings.shape[0] == len(texts), "Embeddings should match the number of input texts"
+    assert embeddings.shape[0] == len(input), "Embeddings should have the same number of samples as input"
     assert embeddings.shape[1] > 0, "Embeddings should have a valid dimension"
 
     logger.info("Encoding test passed!")

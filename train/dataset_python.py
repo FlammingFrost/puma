@@ -1,99 +1,75 @@
 import gzip
 import json
-import random
+import os
 from tqdm import tqdm
-from datasets import Dataset
 from transformers import AutoTokenizer
+from torch.utils.data import Dataset
 
 import sys
-import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from tools.logger import logger
 
-KEEP_KEYS = ["docstring", "code", "func_name", "language", "file_path"]
-PythonDataPath = "tests/data/python/python_train_0.jsonl.gz"
-
 class PythonDataset(Dataset):
     """
-    A custom dataset for loading Python code and docstrings from a JSONL file.
+    A custom dataset for loading Python code and docstrings from a list of query-code pairs.
     
     Args:
-        folder_path (str): Path to the folder containing the JSONL files.
-        seed (int): Random seed for reproducibility.
-        negative_triplets (bool): If True, generate negative triplets for training.
-        negative_precomputed (bool): If True, use precomputed negative examples.
-        subset (str): Subset of data to use ('train', 'test', 'valid').
+        query_code_pairs (list of list of str): List of pairs of query and code.
         tokenizer (AutoTokenizer): Tokenizer to use for tokenizing the data.
+        max_len (int): Maximum length for tokenization.
         
     Returns:
         A custom dataset object.
     """
-    def __init__(self, folder_path, seed=224, negative_triplets=False, negative_precomputed=False, subset='train', tokenizer=None):
-        self.seed = seed
-        self.codes = None
-        self.negative_triplets = negative_triplets
-        self.negative_precomputed = negative_precomputed
+    def __init__(self, data_path, tokenizer, max_len=512):
+        self.query_code_pairs = read_gz_files(data_path)
         self.tokenizer = tokenizer
-
-        if negative_precomputed and not negative_triplets:
-            raise ValueError("negative_triplets must be True when negative_precomputed is True")
-        if subset not in ['train', 'test', 'valid']:
-            raise ValueError("subset must be one of 'train', 'test', 'valid'")
-        self._data = self.load_data(os.path.join(folder_path, subset))
-
-    def load_data(self, folder_path):
-        total_tokens = 0
-        total_records = 0
-        data = []
-        file_paths = [os.path.join(folder_path, file_name) for file_name in os.listdir(folder_path)]
-        for file_path in tqdm(file_paths, desc="Loading data"):
-            with gzip.open(file_path, "rt", encoding="utf-8") as f:
-                for line in f:
-                    row = json.loads(line)  # Parse each JSON line
-                    record = [
-                        row['docstring'],  # anchor
-                        row['code']       # positive
-                    ]
-                    if self.tokenizer:
-                        record[0] = self.tokenizer(row['docstring'], return_tensors='pt', padding=True, truncation=True)
-                        record[1] = self.tokenizer(row['code'], return_tensors='pt', padding=True, truncation=True)
-                    total_records += 1
-                    total_tokens += len(row["code_tokens"])
-                    data.append(record)
-        codes = [row[1] for row in data]
-        logger.debug(f"Total records: {len(data)}")
-        logger.debug(f"Total tokens: {total_tokens}")
-        self.codes = codes
-        
-        return data
+        self.max_len = max_len
+        print(f"Loaded {len(self.query_code_pairs)} query-code pairs. PythonDataset initialized.")
 
     def __len__(self):
-        return len(self._data)
+        return len(self.query_code_pairs)
     
-    @property
-    def data(self):
-        return self._data
-
     def __getitem__(self, idx):
-        if isinstance(idx, list):
-            return [self.data[i] for i in idx]
-        else:
-            return self.data[idx]
+        query, code = self.query_code_pairs[idx]
+        query_enc = self.tokenizer(query, return_tensors='pt', padding='max_length', truncation=True, max_length=self.max_len)
+        code_enc = self.tokenizer(code, return_tensors='pt', padding='max_length', truncation=True, max_length=self.max_len)
+        query_enc = {key: value.squeeze(0) for key, value in query_enc.items()}
+        code_enc = {key: value.squeeze(0) for key, value in code_enc.items()}
+        return query_enc, code_enc
 
-    def to_hf_dataset(self):
-        from datasets import Dataset
-        # TODO: Add negative examples
-        return Dataset.from_dict({
-            "anchor": [self.tokenizer.decode(item[0]['input_ids'][0], skip_special_tokens=True) if self.tokenizer else item[0] for item in self._data],
-            "positive": [self.tokenizer.decode(item[1]['input_ids'][0], skip_special_tokens=True) if self.tokenizer else item[1] for item in self._data],
-            "negative": [self.tokenizer.decode(item[2]['input_ids'][0], skip_special_tokens=True) if len(item) > 2 and self.tokenizer else item[2] if len(item) > 2 else None for item in self._data]
-        })
+def read_gz_files(input_folder):
+    """
+    Read .gz files and return a list of query-code pairs.
+    
+    Args:
+        input_folder (str): Path to the folder containing the raw JSONL files.
+        
+    Returns:
+        List of query-code pairs.
+    """
+    query_code_pairs = []
+    file_paths = [os.path.join(input_folder, file_name) for file_name in os.listdir(input_folder)]
+    
+    for file_path in file_paths:
+        with gzip.open(file_path, "rt", encoding="utf-8") as f:
+            for line in f:
+                row = json.loads(line)
+                query_code_pairs.append([row['docstring'], row['code']])
+    
+    return query_code_pairs
 
 # Example usage
 if __name__ == "__main__":
-    folder_path = "tests/data/python"
-    tokenizer = AutoTokenizer.from_pretrained("jinaai/jina-embeddings-v2-base-code")
-    dataset = PythonDataset(folder_path, tokenizer=tokenizer)
+    input_folder = "data/python_dataset/valid"
+    tokenizer_name = "jinaai/jina-embeddings-v2-base-code"
+    max_len = 512
+    
+    # Initialize tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+    
+    # Create dataset
+    dataset = PythonDataset(input_folder, tokenizer, max_len)
     print(f"Number of records: {len(dataset)}")
     print(f'First row: \n{dataset[0]}')
