@@ -10,24 +10,25 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from retrieval.embedder import *
 from train.dataset_python import PythonDataset
+from retrieval.embedder import MLPEmbedder
 
     
 class MLPEmbedderTrainer:
     """
     Class for training the Query Transformer MLP.
     """
-    def __init__(self, model, train_dataset, eval_dataset, learning_rate=2e-5, epochs=5, batch_size=8, device = 'cpu', **kwargs):
+    def __init__(self, model, train_dataset, eval_dataset, learning_rate=2e-5, epochs=5, batch_size=8):
         self.model = model
         self.train_dataset = train_dataset
+        if not hasattr(self.model, 'embedder'):
+            raise AttributeError("The model does not have an 'embedder' method or attribute.")
         self.eval_dataset = eval_dataset
-        self.learning_rate = learning_rate
+        
         self.epochs = epochs
-        self.device = device
         self.batch_size = batch_size
-        # set kwargs
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+        self.learning_rate = learning_rate
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=1, gamma=0.1)
         # self.sceduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=1, gamma=0.1)
 
     def train(self):
@@ -38,17 +39,15 @@ class MLPEmbedderTrainer:
 
         for epoch in range(self.epochs):
             total_loss = 0
-            for query, code, _ in tqdm(train_loader, desc=f"Training Epoch {epoch+1}/{self.epochs}"):
+            for query_token, code_token in tqdm(train_loader, desc=f"Training Epoch {epoch+1}/{self.epochs}"):
                 self.optimizer.zero_grad()
-                query_emb = self.model(query)
-                code_emb = self.model.embedder(code)
-                assert query_emb.shape == (self.batch_size, 768), f"Query embedding shape is {query_emb.shape}"
-                code_emb = torch.tensor(code_emb).to(self.device)
-                loss = 1 - torch.nn.CosineSimilarity(dim=1)(query_emb, code_emb).mean()
+                token_embedding = self.model(query_token)
+                code_embedding = self.model.embedder(code_token)
+                loss = 1-nn.functional.cosine_similarity(token_embedding, code_embedding).mean()
                 loss.backward()
                 self.optimizer.step()
                 total_loss += loss.item()
-
+            self.scheduler.step()
             avg_loss = total_loss / len(train_loader)
             print(f"Epoch {epoch+1}/{self.epochs}, Training Loss: {avg_loss:.4f}")
 
@@ -56,20 +55,18 @@ class MLPEmbedderTrainer:
             self.model.eval()
             eval_loss = 0
             with torch.no_grad():
-                for query, code, _ in tqdm(eval_loader, desc=f"Evaluating Epoch {epoch+1}/{self.epochs}"):
-                    query_emb = self.model(query)
-                    code_emb = self.model.embedder(code)
-                    code_emb = torch.tensor(code_emb).to(query.device)
-                    loss = 1 - torch.nn.CosineSimilarity()(query_emb, code_emb).mean()
+                for query_token, code_token in tqdm(eval_loader, desc=f"Evaluating Epoch {epoch+1}/{self.epochs}"):
+                    token_embedding = self.model(query_token)
                     eval_loss += loss.item()
-
+                    loss = 1-nn.functional.cosine_similarity(token_embedding, code_embedding).mean()
+                    eval_loss += loss.item()
             avg_eval_loss = eval_loss / len(eval_loader)
             print(f"Epoch {epoch+1}/{self.epochs}, Evaluation Loss: {avg_eval_loss:.4f}")
             self.model.train()
 
         return self.model
 
-    def save_model(self, path="models/MLPEMbedder_finetune.pth"):
+    def save_trained_model(self, path="models/MLPEMbedder_finetune.pth"):
         """Saves the trained model."""
         torch.save(self.model.state_dict(), path)
         print(f"Model saved to {path}")
@@ -85,16 +82,16 @@ if __name__ == "__main__":
     # Load the embedding model
     
     if args.task == "MLP_Embedder_ft":
+        from train.dataset_python import PythonDataset
+        base_model = "jinaai/jina-embeddings-v2-base-code"
+        tokenizer = AutoTokenizer.from_pretrained(base_model)
         trainer = MLPEmbedderTrainer(
-            model=MLPEmbedder(device='cpu'),
-            train_dataset=PythonDataset("data/python_dataset"
-                                        , negative_triplets=True, subset='valid', negative_precomputed=True),
-            eval_dataset=PythonDataset("data/python_dataset", negative_triplets=True,
-                                       negative_precomputed=True,
-                                       subset='valid'),
+            model=MLPEmbedder(base_model=base_model),
+            train_dataset=PythonDataset("data/python_dataset", tokenizer=tokenizer, subset="valid"),
+            eval_dataset=PythonDataset("data/python_dataset", tokenizer=tokenizer, subset="valid"),
             epochs=args.epochs,
             batch_size=args.batch_size,
             learning_rate=args.learning_rate
         )
         trainer.train()
-        trainer.save_model()
+        trainer.save_trained_model()

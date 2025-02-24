@@ -3,6 +3,7 @@ import json
 import random
 from tqdm import tqdm
 from datasets import Dataset
+from transformers import AutoTokenizer
 
 import sys
 import os
@@ -23,32 +24,17 @@ class PythonDataset(Dataset):
         negative_triplets (bool): If True, generate negative triplets for training.
         negative_precomputed (bool): If True, use precomputed negative examples.
         subset (str): Subset of data to use ('train', 'test', 'valid').
+        tokenizer (AutoTokenizer): Tokenizer to use for tokenizing the data.
         
     Returns:
         A custom dataset object.
-        
-    Data format:
-    
-    If `negative_triplets` is False:
-    {
-        "anchor": "docstring",
-        "positive": "code"
-        "negative": None
-    }
-    
-    If `negative_triplets` is True:
-    {
-        "anchor": "docstring",
-        "positive": "code"
-        "negative": "code"          # Randomly sampled if `negative_precomputed` is False
-    }
     """
-    def __init__(self, folder_path, seed=224, negative_triplets=False, negative_precomputed=False, subset='train'):
-        # super(PythonDataset, self).__init__()
+    def __init__(self, folder_path, seed=224, negative_triplets=False, negative_precomputed=False, subset='train', tokenizer=None):
         self.seed = seed
         self.codes = None
         self.negative_triplets = negative_triplets
         self.negative_precomputed = negative_precomputed
+        self.tokenizer = tokenizer
 
         if negative_precomputed and not negative_triplets:
             raise ValueError("negative_triplets must be True when negative_precomputed is True")
@@ -65,24 +51,19 @@ class PythonDataset(Dataset):
             with gzip.open(file_path, "rt", encoding="utf-8") as f:
                 for line in f:
                     row = json.loads(line)  # Parse each JSON line
-                    record = {
-                        'anchor': row['docstring'],
-                        'positive': row['code'],
-                        'negative': None
-                    }
+                    record = [
+                        row['docstring'],  # anchor
+                        row['code']       # positive
+                    ]
+                    if self.tokenizer:
+                        record[0] = self.tokenizer(row['docstring'], return_tensors='pt', padding=True, truncation=True)
+                        record[1] = self.tokenizer(row['code'], return_tensors='pt', padding=True, truncation=True)
                     total_records += 1
                     total_tokens += len(row["code_tokens"])
                     data.append(record)
-        codes = [row["positive"] for row in data]
+        codes = [row[1] for row in data]
         logger.debug(f"Total records: {len(data)}")
         logger.debug(f"Total tokens: {total_tokens}")
-        
-        if self.negative_precomputed:
-            for i, row in enumerate(data):
-                # Get the negative example from the precomputed list
-                while row['negative'] is None or row['negative'] == row['positive']:
-                    row['negative'] = random.choice(codes)
-                data[i] = row
         self.codes = codes
         
         return data
@@ -102,15 +83,17 @@ class PythonDataset(Dataset):
 
     def to_hf_dataset(self):
         from datasets import Dataset
+        # TODO: Add negative examples
         return Dataset.from_dict({
-            "anchor": [item["anchor"] for item in self._data],
-            "positive": [item["positive"] for item in self._data],
-            "negative": [item["negative"] for item in self._data]
+            "anchor": [self.tokenizer.decode(item[0]['input_ids'][0], skip_special_tokens=True) if self.tokenizer else item[0] for item in self._data],
+            "positive": [self.tokenizer.decode(item[1]['input_ids'][0], skip_special_tokens=True) if self.tokenizer else item[1] for item in self._data],
+            "negative": [self.tokenizer.decode(item[2]['input_ids'][0], skip_special_tokens=True) if len(item) > 2 and self.tokenizer else item[2] if len(item) > 2 else None for item in self._data]
         })
 
 # Example usage
 if __name__ == "__main__":
     folder_path = "tests/data/python"
-    dataset = PythonDataset(folder_path)
+    tokenizer = AutoTokenizer.from_pretrained("jinaai/jina-embeddings-v2-base-code")
+    dataset = PythonDataset(folder_path, tokenizer=tokenizer)
     print(f"Number of records: {len(dataset)}")
     print(f'First row: \n{dataset[0]}')
