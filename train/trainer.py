@@ -17,7 +17,8 @@ class MLPEmbedderTrainer:
     """
     Class for training the Query Transformer MLP.
     """
-    def __init__(self, model, train_dataset, eval_dataset, learning_rate=2e-5, epochs=5, batch_size=8):
+    def __init__(self, model, train_dataset, eval_dataset, learning_rate=2e-5, epochs=5, batch_size=8, device='cpu'):
+        self.device = device
         self.model = model
         self.train_dataset = train_dataset
         if not hasattr(self.model, 'embedder'):
@@ -33,21 +34,38 @@ class MLPEmbedderTrainer:
 
     def train(self):
         """Trains the Query Transformer using Cosine Similarity Loss."""
-        self.model.train()
-        train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
-        eval_loader = DataLoader(self.eval_dataset, batch_size=self.batch_size, shuffle=False, num_workers=4)
+        train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=0)
+        eval_loader = DataLoader(self.eval_dataset, batch_size=self.batch_size, shuffle=False)
 
         for epoch in range(self.epochs):
+            self.model.train()
             total_loss = 0
-            for query_token, code_token in tqdm(train_loader, desc=f"Training Epoch {epoch+1}/{self.epochs}"):
+            for batch in tqdm(train_loader, desc=f"Training Epoch {epoch+1}/{self.epochs}"):
+                # import pdb; pdb.set_trace()
+                
+                
+                # Move the input tensors to the GPU
+                query_enc, code_enc = batch
+                query_input = {key: value.to(self.device) for key, value in query_enc.items()}
+                code_input = {key: value.to(self.device) for key, value in code_enc.items()}
+                
+                # debug
+                # assert
+                
+                # Forward pass  
+                query_emb = self.model(query_input)
+                code_emb = self.model.embedder(code_input)
+                
+                # Cosine Similarity Loss
                 self.optimizer.zero_grad()
-                token_embedding = self.model(query_token)
-                code_embedding = self.model.embedder(code_token)
-                loss = 1-nn.functional.cosine_similarity(token_embedding, code_embedding).mean()
+                loss = 1.0 - torch.nn.CosineSimilarity(dim=1)(query_emb, code_emb).mean()
+                
                 loss.backward()
                 self.optimizer.step()
+                
+                
                 total_loss += loss.item()
-            self.scheduler.step()
+
             avg_loss = total_loss / len(train_loader)
             print(f"Epoch {epoch+1}/{self.epochs}, Training Loss: {avg_loss:.4f}")
 
@@ -55,11 +73,14 @@ class MLPEmbedderTrainer:
             self.model.eval()
             eval_loss = 0
             with torch.no_grad():
-                for query_token, code_token in tqdm(eval_loader, desc=f"Evaluating Epoch {epoch+1}/{self.epochs}"):
-                    token_embedding = self.model(query_token)
-                    eval_loss += loss.item()
-                    loss = 1-nn.functional.cosine_similarity(token_embedding, code_embedding).mean()
-                    eval_loss += loss.item()
+                for batch in eval_loader:
+                    query_enc, code_enc = batch
+                    query_input = {key: value.to(self.device) for key, value in query_enc.items()}
+                    code_input = {key: value.to(self.device) for key, value in code_enc.items()}
+                    query_emb = self.model(query_input)
+                    code_emb = self.model.embedder(code_input)
+                    loss = 1.0 - torch.nn.CosineSimilarity(dim=1)(query_emb, code_emb).mean()
+                    eval_loss += loss.item
             avg_eval_loss = eval_loss / len(eval_loader)
             print(f"Epoch {epoch+1}/{self.epochs}, Evaluation Loss: {avg_eval_loss:.4f}")
             self.model.train()
@@ -71,27 +92,30 @@ class MLPEmbedderTrainer:
         torch.save(self.model.state_dict(), path)
         print(f"Model saved to {path}")
 
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs", type=int, default=5)
-    parser.add_argument("--batch_size", type=int, default=8)
-    parser.add_argument("--learning_rate", type=float, default=2e-5)
-    parser.add_argument("--task", type=str, default="MLP_Embedder_ft")
-    args = parser.parse_args()
-    # Load the embedding model
+
+def test_MLPEmbedder():
+    from transformers import AutoTokenizer
+    input_folder = "data/python_dataset/valid"
+    tokenizer_name = "jinaai/jina-embeddings-v2-base-code"
+    base_model_name = "jinaai/jina-embeddings-v2-base-code"
+    max_len = 512
     
-    if args.task == "MLP_Embedder_ft":
-        from train.dataset_python import PythonDataset
-        base_model = "jinaai/jina-embeddings-v2-base-code"
-        tokenizer = AutoTokenizer.from_pretrained(base_model)
-        trainer = MLPEmbedderTrainer(
-            model=MLPEmbedder(base_model=base_model),
-            train_dataset=PythonDataset("data/python_dataset", tokenizer=tokenizer, subset="valid"),
-            eval_dataset=PythonDataset("data/python_dataset", tokenizer=tokenizer, subset="valid"),
-            epochs=args.epochs,
-            batch_size=args.batch_size,
-            learning_rate=args.learning_rate
-        )
-        trainer.train()
-        trainer.save_trained_model()
+    
+    tokenizer = AutoTokenizer.from_pretrained("jinaai/jina-embeddings-v2-base-code")
+    dataset = PythonDataset(input_folder, tokenizer, max_len)
+    base_model = Embedder(model_name=base_model_name)
+    embedder = MLPEmbedder(input_dim=768, hidden_dim=512, output_dim=768, base_model=base_model)
+    
+    trainer = MLPEmbedderTrainer(
+        model=embedder,
+        train_dataset=dataset,
+        eval_dataset=dataset,
+        epochs=1,
+        batch_size=8,
+        learning_rate=2e-5
+    )
+    trained_model = trainer.train()
+    trainer.save_trained_model(path="models/MLPEmbedder_finetune_test.pth")
+
+if __name__ == "__main__":
+    test_MLPEmbedder()
