@@ -3,7 +3,7 @@ import os
 import numpy as np
 import torch
 from transformers import AutoTokenizer
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tools.logger import logger
@@ -63,7 +63,6 @@ if __name__ == "__main__":
     test_folder = "data/python_dataset/test"
     tokenizer_name = "jinaai/jina-embeddings-v2-base-code"
     max_len = 512
-    # subset_size = 10  # Number of examples to run
     
     # Initialize tokenizer
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
@@ -71,23 +70,17 @@ if __name__ == "__main__":
     # Create dataset
     test_dataset = PythonDataset(test_folder, tokenizer, max_len)
     
-    # Create a subset of the dataset
-    # subset_indices = list(range(subset_size))
-    # test_subset = Subset(test_dataset, subset_indices)
-    
     # Initialize embedder
     embedder = Embedder(model_name=tokenizer_name)
     
     # Get embeddings
     query_embeddings, code_embeddings = get_embeddings(test_dataset, embedder)
-    # query_embeddings, code_embeddings = get_embeddings(test_subset, embedder)
+    # Save the embeddings as PyTorch tensors
+    torch.save(query_embeddings, "train/results/query_embeddings.pt")
+    torch.save(code_embeddings, "train/results/code_embeddings.pt")
     
     # Calculate cosine similarities
     similarities = calculate_cosine_similarities(query_embeddings, code_embeddings)
     
     # Save the cosine similarities
     np.save("train/results/cosine_similarities.npy", similarities.cpu().numpy())
-    
-    # Print the cosine similarities
-    # print("Cosine Similarities:")
-    # print(similarities)

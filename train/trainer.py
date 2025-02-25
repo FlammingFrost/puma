@@ -9,8 +9,54 @@ from tqdm import tqdm
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
-
+def compute_and_save_embeddings(dataset, embedder, batch_size=8, save_path="embeddings"):
+    """
+    Compute and save embeddings for the entire dataset using the provided embedder.
     
+    Args:
+        dataset (Dataset): The dataset to encode.
+        embedder (nn.Module): The embedder model.
+        batch_size (int): Batch size for DataLoader.
+        save_path (str): Path to save the embeddings.
+    """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    embedder.to(device).eval()
+    
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, pin_memory=True)
+    query_embeddings, code_embeddings = [], []
+
+    with torch.no_grad():
+        for batch in tqdm(dataloader, desc="Computing embeddings"):
+            query_enc, code_enc = batch
+            query_enc = {key: value.to(device) for key, value in query_enc.items()}
+            code_enc = {key: value.to(device) for key, value in code_enc.items()}
+            
+            query_emb = embedder(query_enc)
+            code_emb = embedder(code_enc)
+            
+            query_embeddings.append(query_emb.cpu())
+            code_embeddings.append(code_emb.cpu())
+
+    query_embeddings = torch.cat(query_embeddings)
+    code_embeddings = torch.cat(code_embeddings)
+
+    torch.save(query_embeddings, f"{save_path}_query.pt")
+    torch.save(code_embeddings, f"{save_path}_code.pt")
+    print(f"Embeddings saved to {save_path}_query.pt and {save_path}_code.pt")
+    
+    
+class PrecomputedEmbeddingsDataset(Dataset):
+    def __init__(self, query_embeddings_path, code_embeddings_path):
+        self.query_embeddings = torch.load(query_embeddings_path)
+        self.code_embeddings = torch.load(code_embeddings_path)
+    
+    def __len__(self):
+        return len(self.query_embeddings)
+    
+    def __getitem__(self, idx):
+        return self.query_embeddings[idx], self.code_embeddings[idx]
+
+
 class MLPEmbedderTrainer:
     """
     Class for training the Query Transformer MLP.
@@ -28,12 +74,11 @@ class MLPEmbedderTrainer:
         self.learning_rate = learning_rate
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=1, gamma=0.1)
-        # self.sceduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=1, gamma=0.1)
 
     def train(self):
         """Trains the Query Transformer using Cosine Similarity Loss."""
-        train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=0)
-        eval_loader = DataLoader(self.eval_dataset, batch_size=self.batch_size, shuffle=False)
+        train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
+        eval_loader = DataLoader(self.eval_dataset, batch_size=self.batch_size, shuffle=False, num_workers=4)
         
         # Print the number of trainable and frozen parameters
         self.model.to(self.device)
@@ -45,7 +90,8 @@ class MLPEmbedderTrainer:
         print(f"Trainable parameters: {trainable_params}")
         print(f"Frozen parameters: {frozen_params}")
         
-        
+        # Initialize AMP Gradient Scaler
+        scaler = torch.cuda.amp.GradScaler()
 
         for epoch in range(self.epochs):
             self.model.train()
@@ -55,24 +101,22 @@ class MLPEmbedderTrainer:
                 
                 
                 # Move the input tensors to the GPU
-                query_enc, code_enc = batch
-                query_input = {key: value.to(self.device) for key, value in query_enc.items()}
-                code_input = {key: value.to(self.device) for key, value in code_enc.items()}
+                query_emb, code_emb = batch
+                query_emb = {key: value.to(self.device) for key, value in query_emb.items()}
+                code_emb = {key: value.to(self.device) for key, value in code_emb.items()}
                 
                 # debug
                 # assert
                 
                 # Forward pass  
-                query_emb = self.model(query_input)
-                code_emb = self.model.embedder(code_input)
-                
-                # Cosine Similarity Loss
+                with torch.cuda.amp.autocast():
+                    output = self.model(query_emb)
+                    loss = 1.0 - torch.nn.CosineSimilarity(dim=1)(output, code_emb).mean()
+                    
                 self.optimizer.zero_grad()
-                loss = 1.0 - torch.nn.CosineSimilarity(dim=1)(query_emb, code_emb).mean()
-                
-                loss.backward()
-                self.optimizer.step()
-                
+                scaler.scale(loss).backward()
+                scaler.step(self.optimizer)
+                scaler.update()
                 
                 total_loss += loss.item()
 
@@ -84,18 +128,20 @@ class MLPEmbedderTrainer:
             eval_loss = 0
             with torch.no_grad():
                 for batch in eval_loader:
-                    query_enc, code_enc = batch
-                    query_input = {key: value.to(self.device) for key, value in query_enc.items()}
-                    code_input = {key: value.to(self.device) for key, value in code_enc.items()}
-                    query_emb = self.model(query_input)
-                    code_emb = self.model.embedder(code_input)
-                    loss = 1.0 - torch.nn.CosineSimilarity(dim=1)(query_emb, code_emb).mean()
-                    eval_loss += loss.item
+                    query_emb, code_emb = batch
+                    query_emb = {key: value.to(self.device) for key, value in query_emb.items()}
+                    code_emb = {key: value.to(self.device) for key, value in code_emb.items()}
+                    
+                    with torch.amp.autocast("cuda"):
+                        output = self.model(query_emb)
+                        loss = 1.0 - torch.nn.CosineSimilarity(dim=1)(output, code_emb).mean()
+                    
+                    eval_loss += loss.item()
             avg_eval_loss = eval_loss / len(eval_loader)
             print(f"Epoch {epoch+1}/{self.epochs}, Evaluation Loss: {avg_eval_loss:.4f}")
             self.model.train()
 
-        return self.model
+        return self.model   
 
     def save_trained_model(self, path="models/MLPEMbedder_finetune.pth"):
         """Saves the trained model."""
@@ -114,7 +160,7 @@ def test_MLPEmbedder():
     max_len = 512
     
     
-    tokenizer = AutoTokenizer.from_pretrained("jinaai/jina-embeddings-v2-base-code")
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     dataset = PythonDataset(input_folder, tokenizer, max_len)
     base_model = Embedder(model_name=base_model_name)
     embedder = MLPEmbedder(input_dim=768, hidden_dim=512, output_dim=768, base_model=base_model)
