@@ -76,8 +76,8 @@ if __name__ == "__main__":
     # Get embeddings
     query_embeddings, code_embeddings = get_embeddings(test_dataset, embedder)
     # Save the embeddings as PyTorch tensors
-    torch.save(query_embeddings, "train/results/query_embeddings.pt")
-    torch.save(code_embeddings, "train/results/code_embeddings.pt")
+    torch.save(query_embeddings, "models/embeddings/test_embeddings_query.pt")
+    torch.save(code_embeddings, "models/embeddings/test_embeddings_code.pt")
     
     # Calculate cosine similarities
     similarities = calculate_cosine_similarities(query_embeddings, code_embeddings)
