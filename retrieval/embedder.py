@@ -46,7 +46,21 @@ class MLPEmbedder(nn.Module):
             param.requires_grad = mode
         for param in self.fc2.parameters():
             param.requires_grad = mode
-        
+            
+class MLP(nn.Module):
+    """
+    Defines the MLP transformation layer to map query embedding closer to code embedding.
+    Now works with precomputed embeddings instead of raw token inputs.
+    """
+    def __init__(self, input_dim=768, hidden_dim=512, output_dim=768):
+        super(MLP, self).__init__()
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_dim, output_dim)
+
+    def forward(self, input_emb):
+        mapped_emb = self.fc2(self.relu(self.fc1(input_emb)))
+        return mapped_emb
 
 class Embedder(nn.Module):
     """
