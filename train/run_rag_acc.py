@@ -4,16 +4,12 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
-from tests.load_data import load_data_python
-from embedding.database import Database
+from retrieval.database import Database
 from tools.logger import logger
 
 file_path_python = "tests/data/python/python_train_0.jsonl.gz"
 file_with_query = "tests/data/python/python_with_query.jsonl.gz"
 
-def generate_query(data):
-    # TODO: Use api to generate query from docstring
-    pass
 
 def get_retrieval_unstructure(data):
     """
