@@ -4,7 +4,7 @@ import hashlib
 import chromadb
 import pandas as pd
 from tools.logger import logger
-from configs.configurator import config
+from tools.configs.configurator import config
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -29,7 +29,7 @@ class Database:
         'dependencies': None
     }
 
-    def __init__(self, vector_store_path: str, embedding_func = None, conf = None):
+    def __init__(self, vector_store_path: str, embedding_func = None, conf = None, top_k = None):
         if embedding_func is None:
             self.embedding_func = lambda x: self.get_embedding(text=x, model='text-embedding-ada-002')
         else:
@@ -47,7 +47,10 @@ class Database:
         if conf is None:
             conf = config
         
-        self.top_k = conf["vectorbase_top_k"]
+        if top_k is None:
+            self.top_k = conf["vectorbase_top_k"]
+        else:
+            self.top_k = top_k
         self.name = conf.get("retriever_name", "Database")
 
     def _format_metadata(self, metadata: dict, match = False):
@@ -111,6 +114,24 @@ class Database:
             embeddings=text_embedding,
             metadatas=formatted_metadata,
             documents=code
+        )
+    
+    def insert_embedding(self, embedding: list, id, metadata: dict, match = False):
+        """
+        Insert a new vector to the vector store.
+        Note: This function is used for precomputed embeddings.
+        
+        Args:
+            text (str): The text to store.
+            match (bool): Match metadata schema. Default is False. Raises an error if metadata key is missing.
+        """
+        formatted_metadata = self._format_metadata(metadata, match)
+        
+        self.collection.add(
+            ids=id,
+            embeddings=embedding,
+            metadatas=formatted_metadata,
+            documents=None
         )
         
     def _insert_many(self, data: list[dict], match = False):
