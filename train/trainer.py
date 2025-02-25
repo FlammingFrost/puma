@@ -9,7 +9,7 @@ from tqdm import tqdm
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
-def compute_and_save_embeddings(dataset, embedder, batch_size=8, save_path="embeddings"):
+def compute_and_save_embeddings(dataset, embedder, batch_size=8, save_path="models/embeddings"):
     """
     Compute and save embeddings for the entire dataset using the provided embedder.
     
@@ -22,7 +22,7 @@ def compute_and_save_embeddings(dataset, embedder, batch_size=8, save_path="embe
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     embedder.to(device).eval()
     
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, pin_memory=True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=4)
     query_embeddings, code_embeddings = [], []
 
     with torch.no_grad():
@@ -34,11 +34,11 @@ def compute_and_save_embeddings(dataset, embedder, batch_size=8, save_path="embe
             query_emb = embedder(query_enc)
             code_emb = embedder(code_enc)
             
-            query_embeddings.append(query_emb.cpu())
-            code_embeddings.append(code_emb.cpu())
+            query_embeddings.append(query_emb)
+            code_embeddings.append(code_emb)
 
-    query_embeddings = torch.cat(query_embeddings)
-    code_embeddings = torch.cat(code_embeddings)
+    query_embeddings = torch.cat(query_embeddings).cpu()
+    code_embeddings = torch.cat(code_embeddings).cpu()
 
     torch.save(query_embeddings, f"{save_path}_query.pt")
     torch.save(code_embeddings, f"{save_path}_code.pt")
@@ -65,8 +65,6 @@ class MLPEmbedderTrainer:
         self.device = device
         self.model = model
         self.train_dataset = train_dataset
-        if not hasattr(self.model, 'embedder'):
-            raise AttributeError("The model does not have an 'embedder' method or attribute.")
         self.eval_dataset = eval_dataset
         
         self.epochs = epochs
@@ -91,25 +89,19 @@ class MLPEmbedderTrainer:
         print(f"Frozen parameters: {frozen_params}")
         
         # Initialize AMP Gradient Scaler
-        scaler = torch.cuda.amp.GradScaler()
+        scaler = torch.amp.GradScaler("cuda")
 
         for epoch in range(self.epochs):
             self.model.train()
             total_loss = 0
             for batch in tqdm(train_loader, desc=f"Training Epoch {epoch+1}/{self.epochs}"):
-                # import pdb; pdb.set_trace()
-                
-                
-                # Move the input tensors to the GPU
+               # Move the input tensors to the GPU
                 query_emb, code_emb = batch
-                query_emb = {key: value.to(self.device) for key, value in query_emb.items()}
-                code_emb = {key: value.to(self.device) for key, value in code_emb.items()}
-                
-                # debug
-                # assert
+                query_emb = query_emb.to(self.device)
+                code_emb = code_emb.to(self.device)
                 
                 # Forward pass  
-                with torch.cuda.amp.autocast():
+                with torch.amp.autocast("cuda"):
                     output = self.model(query_emb)
                     loss = 1.0 - torch.nn.CosineSimilarity(dim=1)(output, code_emb).mean()
                     
@@ -129,8 +121,8 @@ class MLPEmbedderTrainer:
             with torch.no_grad():
                 for batch in eval_loader:
                     query_emb, code_emb = batch
-                    query_emb = {key: value.to(self.device) for key, value in query_emb.items()}
-                    code_emb = {key: value.to(self.device) for key, value in code_emb.items()}
+                    query_emb = query_emb.to(self.device)
+                    code_emb = code_emb.to(self.device)
                     
                     with torch.amp.autocast("cuda"):
                         output = self.model(query_emb)
@@ -139,8 +131,9 @@ class MLPEmbedderTrainer:
                     eval_loss += loss.item()
             avg_eval_loss = eval_loss / len(eval_loader)
             print(f"Epoch {epoch+1}/{self.epochs}, Evaluation Loss: {avg_eval_loss:.4f}")
+        
             self.model.train()
-
+            
         return self.model   
 
     def save_trained_model(self, path="models/MLPEMbedder_finetune.pth"):
