@@ -9,7 +9,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
                 
 from retrieval.embedder import Embedder, MLP
 from dataset_python import PythonDataset
-from trainer import MLPEmbedderTrainer
+from trainer import MLPEmbedderTrainer, compute_and_save_embeddings, PrecomputedEmbeddingsDataset
+
 
 
 def main(args):
@@ -28,7 +29,6 @@ def main(args):
     # eval_subset = Subset(eval_dataset, subset_indices)
     
     base_model = Embedder(model_name=args.base_model_name)
-<<<<<<< HEAD
     
     # Compute and save embeddings
     compute_and_save_embeddings(train_dataset, base_model, batch_size=args.batch_size, save_path=args.train_emb_path)
@@ -41,9 +41,6 @@ def main(args):
     eval_dataset = PrecomputedEmbeddingsDataset(f"{args.eval_emb_path}_query.pt", f"{args.eval_emb_path}_code.pt")
     
     embedder = MLP(input_dim=768, hidden_dim=512, output_dim=768)
-=======
-    embedder = MLPEmbedder(input_dim=768, hidden_dim=512, output_dim=768, base_model=base_model)
->>>>>>> origin/main
     
     trainer = MLPEmbedderTrainer(
         model=embedder,
