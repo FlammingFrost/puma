@@ -75,3 +75,10 @@ Refer to [INSTALL.md](docs/INSTALL.md).
 ## Usage (Not yet available)
 Refer to [USAGE.md](docs/USAGE.md).
 
+## Training
+
+### MLPEmbedder
+
+```cmd
+python train/train.py --max_len 4096 --epochs 10 --batch_size 8 --learning_rate 2e-5 --device cuda --save_path models/MLPEmbedder_finetune.pth
+```

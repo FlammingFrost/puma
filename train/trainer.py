@@ -8,9 +8,7 @@ import os
 from tqdm import tqdm
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from retrieval.embedder import *
-from train.dataset_python import PythonDataset
-from retrieval.embedder import MLPEmbedder
+
 
     
 class MLPEmbedderTrainer:
@@ -36,6 +34,18 @@ class MLPEmbedderTrainer:
         """Trains the Query Transformer using Cosine Similarity Loss."""
         train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=0)
         eval_loader = DataLoader(self.eval_dataset, batch_size=self.batch_size, shuffle=False)
+        
+        # Print the number of trainable and frozen parameters
+        self.model.to(self.device)
+        self.model.train()
+        total_params = sum(p.numel() for p in self.model.parameters())
+        trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        frozen_params = total_params - trainable_params
+        print(f"Total parameters: {total_params}")
+        print(f"Trainable parameters: {trainable_params}")
+        print(f"Frozen parameters: {frozen_params}")
+        
+        
 
         for epoch in range(self.epochs):
             self.model.train()
@@ -93,8 +103,11 @@ class MLPEmbedderTrainer:
         print(f"Model saved to {path}")
 
 
+
 def test_MLPEmbedder():
     from transformers import AutoTokenizer
+    from retrieval.embedder import Embedder, MLPEmbedder
+    from train.dataset_python import PythonDataset
     input_folder = "data/python_dataset/valid"
     tokenizer_name = "jinaai/jina-embeddings-v2-base-code"
     base_model_name = "jinaai/jina-embeddings-v2-base-code"
@@ -114,7 +127,7 @@ def test_MLPEmbedder():
         batch_size=8,
         learning_rate=2e-5
     )
-    trained_model = trainer.train()
+    # trainer.train()
     trainer.save_trained_model(path="models/MLPEmbedder_finetune_test.pth")
 
 if __name__ == "__main__":
