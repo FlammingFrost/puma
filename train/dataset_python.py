@@ -4,6 +4,8 @@ import os
 from tqdm import tqdm
 from transformers import AutoTokenizer
 from torch.utils.data import Dataset
+import torch
+
 
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -38,6 +40,17 @@ class PythonDataset(Dataset):
         query_enc = {key: value.squeeze(0) for key, value in query_enc.items()}
         code_enc = {key: value.squeeze(0) for key, value in code_enc.items()}
         return query_enc, code_enc
+
+class PrecomputedEmbeddingsDataset(Dataset):
+    def __init__(self, query_embeddings_path, code_embeddings_path):
+        self.query_embeddings = torch.load(query_embeddings_path, map_location=torch.device('cpu'))
+        self.code_embeddings = torch.load(code_embeddings_path, map_location=torch.device('cpu'))
+    
+    def __len__(self):
+        return len(self.query_embeddings)
+    
+    def __getitem__(self, idx):
+        return self.query_embeddings[idx], self.code_embeddings[idx]
 
 def read_gz_files(input_folder):
     """

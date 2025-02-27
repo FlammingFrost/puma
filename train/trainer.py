@@ -44,17 +44,6 @@ def compute_and_save_embeddings(dataset, embedder, batch_size=8, save_path="mode
     torch.save(code_embeddings, f"{save_path}_code.pt")
     print(f"Embeddings saved to {save_path}_query.pt and {save_path}_code.pt")
     
-    
-class PrecomputedEmbeddingsDataset(Dataset):
-    def __init__(self, query_embeddings_path, code_embeddings_path):
-        self.query_embeddings = torch.load(query_embeddings_path)
-        self.code_embeddings = torch.load(code_embeddings_path)
-    
-    def __len__(self):
-        return len(self.query_embeddings)
-    
-    def __getitem__(self, idx):
-        return self.query_embeddings[idx], self.code_embeddings[idx]
 
 
 class MLPEmbedderTrainer:

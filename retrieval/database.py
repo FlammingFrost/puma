@@ -31,9 +31,8 @@ class Database:
 
     def __init__(self, vector_store_path: str, embedding_func = None, conf = None, top_k = None):
         if embedding_func is None:
-            self.embedding_func = lambda x: self.get_embedding(text=x, model='text-embedding-ada-002')
-        else:
-            self.embedding_func = embedding_func
+            print("Embedding function is not provided.")
+        self.embedding_func = embedding_func
         self.client = chromadb.PersistentClient(path=vector_store_path)
         self.vector_store_path = vector_store_path
         self.client = chromadb.PersistentClient(path=vector_store_path)
@@ -172,6 +171,26 @@ class Database:
         query_result = self.collection.query(
             query_embeddings=query_embedding,
             n_results=self.top_k,
+            where=None
+        )
+        return query_result
+    
+    def retrieve_by_embedding(self, query_embedding: list, top_k: int = None) -> list[dict]:
+        """
+        Retrieve top k vectors from the vector store based on the query.
+        
+        Args:
+            query_embedding: The query embedding.
+            top_k: The number of results to return.
+        
+        Returns:
+            A list of dictionaries containing the retrieved vectors.
+        """
+        if top_k is None:
+            top_k = self.top_k
+        query_result = self.collection.query(
+            query_embeddings=query_embedding,
+            n_results=top_k,
             where=None
         )
         return query_result
