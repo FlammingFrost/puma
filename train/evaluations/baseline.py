@@ -5,7 +5,7 @@ import torch
 from transformers import AutoTokenizer
 from torch.utils.data import DataLoader
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from tools.logger import logger
 from train.dataset_python import PythonDataset
 from retrieval.embedder import Embedder

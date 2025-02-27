@@ -12,7 +12,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
                 
 from retrieval.embedder import Embedder, mean_pooling
 from dataset_python import PythonDataset
-from tools.logger import logger
 
 def fine_tune_with_lora(args):
     print('args:', args)
@@ -29,8 +28,8 @@ def fine_tune_with_lora(args):
     # Apply LoRA to the model
     lora_config = LoraConfig(
         task_type=TaskType.FEATURE_EXTRACTION, 
-        r=8, 
-        lora_alpha=32, 
+        r=4, 
+        lora_alpha=16, 
         lora_dropout=0.1, 
         target_modules=["query", "value"]
     )
@@ -38,6 +37,7 @@ def fine_tune_with_lora(args):
     model.to(args.device)
     
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+    scaler = torch.amp.GradScaler("cuda")  # Initialize AMP GradScaler
     
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
     eval_loader = DataLoader(eval_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
@@ -47,25 +47,24 @@ def fine_tune_with_lora(args):
         total_loss = 0
         for batch in tqdm(train_loader, desc=f"Training Epoch {epoch+1}/{args.epochs}"):
             query_enc, code_enc = batch
-            print("Query enc keys:", query_enc.keys())
-            print("Code enc keys:", code_enc.keys())
-
             query_enc = {key: value.to(args.device) for key, value in query_enc.items()}
             code_enc = {key: value.to(args.device) for key, value in code_enc.items()}
             
-            
             optimizer.zero_grad()
-            outputs = model(**query_enc)
-            query_emb = mean_pooling(outputs, query_enc['attention_mask'])
-            query_emb = F.normalize(query_emb, p=2, dim=1)
+            with torch.amp.autocast("cuda"):  # Enable mixed precision
+                outputs = model(**query_enc)
+                query_emb = mean_pooling(outputs, query_enc['attention_mask'])
+                query_emb = F.normalize(query_emb, p=2, dim=1)
+                
+                outputs = model(**code_enc)
+                code_emb = mean_pooling(outputs, code_enc['attention_mask'])
+                code_emb = F.normalize(code_emb, p=2, dim=1)
+                
+                loss = 1.0 - torch.nn.CosineSimilarity(dim=1)(query_emb, code_emb).mean()
             
-            outputs = model(**code_enc)
-            code_emb = mean_pooling(outputs, code_enc['attention_mask'])
-            code_emb = F.normalize(code_emb, p=2, dim=1)
-            
-            loss = 1.0 - torch.nn.CosineSimilarity(dim=1)(query_emb, code_emb).mean()
-            loss.backward()
-            optimizer.step()
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
             
             total_loss += loss.item()
         
@@ -80,15 +79,17 @@ def fine_tune_with_lora(args):
                 query_enc = {key: value.to(args.device) for key, value in query_enc.items()}
                 code_enc = {key: value.to(args.device) for key, value in code_enc.items()}
                 
-                outputs = model(**query_enc)
-                query_emb = mean_pooling(outputs, query_enc['attention_mask'])
-                query_emb = F.normalize(query_emb, p=2, dim=1)
+                with torch.amp.autocast("cuda"):  # Enable mixed precision
+                    outputs = model(**query_enc)
+                    query_emb = mean_pooling(outputs, query_enc['attention_mask'])
+                    query_emb = F.normalize(query_emb, p=2, dim=1)
+                    
+                    outputs = model(**code_enc)
+                    code_emb = mean_pooling(outputs, code_enc['attention_mask'])
+                    code_emb = F.normalize(code_emb, p=2, dim=1)
+                    
+                    loss = 1.0 - torch.nn.CosineSimilarity(dim=1)(query_emb, code_emb).mean()
                 
-                outputs = model(**code_enc)
-                code_emb = mean_pooling(outputs, code_enc['attention_mask'])
-                code_emb = F.normalize(code_emb, p=2, dim=1)
-                
-                loss = 1.0 - torch.nn.CosineSimilarity(dim=1)(query_emb, code_emb).mean()
                 eval_loss += loss.item()
         
         avg_eval_loss = eval_loss / len(eval_loader)
