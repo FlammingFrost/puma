@@ -52,14 +52,44 @@ class MLP(nn.Module):
     Defines the MLP transformation layer to map query embedding closer to code embedding.
     Now works with precomputed embeddings instead of raw token inputs.
     """
-    def __init__(self, input_dim=768, hidden_dim=512, output_dim=768):
+    def __init__(self, input_dim=768, hidden_dim=512, output_dim=768, residual=False):
         super(MLP, self).__init__()
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_dim, output_dim)
+        self.network = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim),
+        )
+        self.layer_norm = nn.LayerNorm(input_dim)
+        self.residual = residual
 
     def forward(self, input_emb):
-        mapped_emb = self.fc2(self.relu(self.fc1(input_emb)))
+        if self.residual:
+            mapped_emb = self.layer_norm(input_emb + self.network(input_emb))
+        else:
+            mapped_emb = self.network(input_emb)
+        return mapped_emb
+
+class FFN(nn.Module):
+    """
+    Defines the Feed Forward Network (FFN) layer. It's a simple 2-layer MLP with residual connection.
+    """
+    def __init__(self, input_dim=768, hidden_dim=512, output_dim=768, residual=True):
+        super(FFN, self).__init__()
+        self.network = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim),
+            nn.ReLU(),
+            nn.Linear(output_dim, input_dim),
+        )
+        self.layer_norm = nn.LayerNorm(input_dim)
+        self.residual = residual
+
+    def forward(self, input_emb):
+        if self.residual:
+            mapped_emb = self.layer_norm(input_emb + self.network(input_emb))
+        else:
+            mapped_emb = self.network(input_emb)
         return mapped_emb
 
 class Embedder(nn.Module):
