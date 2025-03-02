@@ -7,9 +7,9 @@ fi
 
 BASE_MODEL_NAME=$1
 
-python train/train.py \
+python train.py \
     --task embedding \
     --base_model_name $BASE_MODEL_NAME \
     --tokenizer_name $BASE_MODEL_NAME \
-    --batch_size 8 \
+    --batch_size 512 \
     --max_len 512

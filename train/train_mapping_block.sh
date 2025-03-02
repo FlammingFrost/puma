@@ -1,13 +1,15 @@
 #!/bin/bash
 
-if [ "$#" -ne 3 ]; then
-    echo "Usage: $0 <mapping_block> <train_emb_path> <eval_emb_path>"
+if [ "$#" -ne 5 ]; then
+    echo "Usage: $0 <mapping_block> <train_query_emb_path> <train_code_emb_path> <eval_query_emb_path> <eval_code_emb_path>"
     exit 1
 fi
 
 MAPPING_BLOCK=$1
-TRAIN_EMB_PATH=$2
-EVAL_EMB_PATH=$3
+TRAIN_QUERY_EMB_PATH=$2
+TRAIN_CODE_EMB_PATH=$3
+EVAL_QUERY_EMB_PATH=$4
+EVAL_CODE_EMB_PATH=$5
 
 python train/train.py \
     --mapping_block $MAPPING_BLOCK \
@@ -20,5 +22,7 @@ python train/train.py \
     --batch_size 8 \
     --learning_rate 2e-5 \
     --device cuda \
-    --train_emb_path $TRAIN_EMB_PATH \
-    --eval_emb_path $EVAL_EMB_PATH
+    --train_query_emb_path $TRAIN_QUERY_EMB_PATH \
+    --train_code_emb_path $TRAIN_CODE_EMB_PATH \
+    --eval_query_emb_path $EVAL_QUERY_EMB_PATH \
+    --eval_code_emb_path $EVAL_CODE_EMB_PATH

@@ -22,8 +22,8 @@ def main(args):
     
     
     # Load precomputed embeddings
-    train_dataset = PrecomputedEmbeddingsDataset(f"{args.train_emb_path}_query.pt", f"{args.train_emb_path}_code.pt")
-    eval_dataset = PrecomputedEmbeddingsDataset(f"{args.eval_emb_path}_query.pt", f"{args.eval_emb_path}_code.pt")
+    train_dataset = PrecomputedEmbeddingsDataset(args.train_query_emb_path, args.train_code_emb_path)
+    eval_dataset = PrecomputedEmbeddingsDataset(args.eval_query_emb_path, args.eval_code_emb_path)
     
     if args.mapping_block == "MLP":
         embedder = MLP(input_dim=768, hidden_dim=512, output_dim=768, residual=args.residual)
@@ -67,8 +67,10 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", type=float, default=2e-5, help="Learning rate")
     parser.add_argument("--device", type=str, default="cuda", help="Device to train on (cpu or cuda)")
     # parser.add_argument("--save_path", type=str, default="None", help="Path to save the trained model")
-    parser.add_argument("--train_emb_path", type=str, default="models/embeddings/train_embeddings", help="Path to save the training embeddings")
-    parser.add_argument("--eval_emb_path", type=str, default="models/embeddings/eval_embeddings", help="Path to save the evaluation embeddings")
+    parser.add_argument("--train_query_emb_path", type=str, default="models/embeddings/train_query_embeddings.pt", help="Path to the training query embeddings")
+    parser.add_argument("--train_code_emb_path", type=str, default="models/embeddings/train_code_embeddings.pt", help="Path to the training code embeddings")
+    parser.add_argument("--eval_query_emb_path", type=str, default="models/embeddings/eval_query_embeddings.pt", help="Path to the evaluation query embeddings")
+    parser.add_argument("--eval_code_emb_path", type=str, default="models/embeddings/eval_code_embeddings.pt", help="Path to the evaluation code embeddings")
     # parser.add_argument("--subset_size", type=int, default=10, help="Number of examples to load for quick experimentation")
     
     args = parser.parse_args()
