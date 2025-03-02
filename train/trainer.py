@@ -9,15 +9,16 @@ from tqdm import tqdm
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
-def compute_and_save_embeddings(dataset, embedder, batch_size=8, save_path="models/embeddings"):
+def compute_and_save_embeddings(dataset, embedder, batch_size=8, save_path="models/embeddings", subset=['query', 'code']):
     """
-    Compute and save embeddings for the entire dataset using the provided embedder.
+    Compute and save embeddings for the specified subset of the dataset using the provided embedder.
     
     Args:
         dataset (Dataset): The dataset to encode.
         embedder (nn.Module): The embedder model.
         batch_size (int): Batch size for DataLoader.
         save_path (str): Path to save the embeddings.
+        subset (list): List specifying which embeddings to compute ('query', 'code').
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     embedder.to(device).eval()
@@ -28,25 +29,29 @@ def compute_and_save_embeddings(dataset, embedder, batch_size=8, save_path="mode
     with torch.no_grad():
         for batch in tqdm(dataloader, desc="Computing embeddings"):
             query_enc, code_enc = batch
-            query_enc = {key: value.to(device) for key, value in query_enc.items()}
-            code_enc = {key: value.to(device) for key, value in code_enc.items()}
-            
-            query_emb = embedder(query_enc)
-            code_emb = embedder(code_enc)
-            
-            query_embeddings.append(query_emb)
-            code_embeddings.append(code_emb)
+            if 'query' in subset:
+                query_enc = {key: value.to(device) for key, value in query_enc.items()}
+                query_emb = embedder(query_enc)
+                query_embeddings.append(query_emb)
+            if 'code' in subset:
+                code_enc = {key: value.to(device) for key, value in code_enc.items()}
+                code_emb = embedder(code_enc)
+                code_embeddings.append(code_emb)
 
-    query_embeddings = torch.cat(query_embeddings).cpu()
-    code_embeddings = torch.cat(code_embeddings).cpu()
-
-    torch.save(query_embeddings, f"{save_path}_query.pt")
-    torch.save(code_embeddings, f"{save_path}_code.pt")
-    print(f"Embeddings saved to {save_path}_query.pt and {save_path}_code.pt")
+    if 'query' in subset:
+        query_embeddings = torch.cat(query_embeddings).cpu()
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        torch.save(query_embeddings, f"{save_path}_query.pt")
+        print(f"Query embeddings saved to {save_path}_query.pt")
+    if 'code' in subset:
+        code_embeddings = torch.cat(code_embeddings).cpu()
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        torch.save(code_embeddings, f"{save_path}_code.pt")
+        print(f"Code embeddings saved to {save_path}_code.pt")
     
 
 
-class MLPEmbedderTrainer:
+class MappingBlockTrainer:
     """
     Class for training the Query Transformer MLP.
     """
@@ -147,7 +152,7 @@ def test_MLPEmbedder():
     base_model = Embedder(model_name=base_model_name)
     embedder = MLPEmbedder(input_dim=768, hidden_dim=512, output_dim=768, base_model=base_model)
     
-    trainer = MLPEmbedderTrainer(
+    trainer = MappingBlockTrainer(
         model=embedder,
         train_dataset=dataset,
         eval_dataset=dataset,
