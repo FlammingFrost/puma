@@ -9,7 +9,7 @@ MAPPING_BLOCK=$1
 TRAIN_EMB_PATH=$2
 EVAL_EMB_PATH=$3
 
-python train.py \
+python train/train.py \
     --mapping_block $MAPPING_BLOCK \
     --train_data data/python_dataset/train \
     --eval_data data/python_dataset/valid \
@@ -20,6 +20,5 @@ python train.py \
     --batch_size 512 \
     --learning_rate 2e-5 \
     --device cuda \
-    --save_path models/MLP.pth \
     --train_emb_path $TRAIN_EMB_PATH \
     --eval_emb_path $EVAL_EMB_PATH

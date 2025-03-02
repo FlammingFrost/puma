@@ -7,7 +7,7 @@ fi
 
 BASE_MODEL_NAME=$1
 
-python train.py \
+python train/train.py \
     --task embedding \
     --base_model_name $BASE_MODEL_NAME \
     --tokenizer_name $BASE_MODEL_NAME \
