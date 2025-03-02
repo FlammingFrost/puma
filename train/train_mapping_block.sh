@@ -19,7 +19,7 @@ python train/train.py \
     --base_model_name jinaai/jina-embeddings-v2-base-code \
     --max_len 512 \
     --epochs 200 \
-    --batch_size 8 \
+    --batch_size 64 \
     --learning_rate 2e-5 \
     --device cuda \
     --train_query_emb_path $TRAIN_QUERY_EMB_PATH \
