@@ -11,5 +11,5 @@ python train/train.py \
     --task embedding \
     --base_model_name $BASE_MODEL_NAME \
     --tokenizer_name $BASE_MODEL_NAME \
-    --batch_size 512 \
+    --batch_size 8 \
     --max_len 512
