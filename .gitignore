@@ -30,6 +30,8 @@ tests/rag_db/
 
 # Large model files (if downloaded)
 models/
+train/embeddings/
+train/results/
 
 # FastAPI / Web Server artifacts
 *.sqlite3
