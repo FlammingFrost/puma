@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 import argparse
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..3")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from retrieval.embedder import MLP
 
