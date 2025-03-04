@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ "$#" -ne 5 ]; then
-    echo "Usage: $0 <mapping_block> <train_query_emb_path> <train_code_emb_path> <eval_query_emb_path> <eval_code_emb_path>"
+if [ "$#" -ne 6 ]; then
+    echo "Usage: $0 <mapping_block> <train_query_emb_path> <train_code_emb_path> <eval_query_emb_path> <eval_code_emb_path> <residual>"
     exit 1
 fi
 
@@ -10,6 +10,7 @@ TRAIN_QUERY_EMB_PATH=$2
 TRAIN_CODE_EMB_PATH=$3
 EVAL_QUERY_EMB_PATH=$4
 EVAL_CODE_EMB_PATH=$5
+RESIDUAL=$6
 
 python train/train.py \
     --mapping_block $MAPPING_BLOCK \
@@ -25,4 +26,5 @@ python train/train.py \
     --train_query_emb_path $TRAIN_QUERY_EMB_PATH \
     --train_code_emb_path $TRAIN_CODE_EMB_PATH \
     --eval_query_emb_path $EVAL_QUERY_EMB_PATH \
-    --eval_code_emb_path $EVAL_CODE_EMB_PATH
+    --eval_code_emb_path $EVAL_CODE_EMB_PATH \
+    --residual $RESIDUAL
