@@ -22,7 +22,6 @@ def eval():
         queries = torch.load("eval_embeddings_query_fp16.pt", weights_only=False)
         codes = torch.load("eval_embeddings_code_fp16.pt", weights_only=False)
     else:
-        
         eval_dataset = PythonDataset(EVAL_DATASET_PATH, tokenizer, max_len=512)    
         for query_enc, code_enc in tqdm(eval_dataset):
             query_enc = {key: value.to("cuda") for key, value in query_enc.items()}
@@ -30,10 +29,12 @@ def eval():
             
             queries, codes = [], []
             with torch.no_grad():
+                if len(queries) > 100: break
                 query_emb = model_fp16(**query_enc).pooler_output
                 code_emb = model_fp16(**code_enc).pooler_output
                 queries.append(query_emb)
                 codes.append(code_emb)
+                assert type(query_emb) == torch.Tensor, "Query embeddings should be a PyTorch tensor"
         
         # save the embeddings
         torch.save(queries, "eval_embeddings_query_fp16.pt")
