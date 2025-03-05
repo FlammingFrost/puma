@@ -19,8 +19,8 @@ def eval():
     model_fp16.eval()
     
     if os.path.exists("eval_embeddings_query_fp16.pt") and os.path.exists("eval_embeddings_code_fp16.pt"):
-        queries = torch.load("eval_embeddings_query_fp16.pt")
-        codes = torch.load("eval_embeddings_code_fp16.pt")
+        queries = torch.load("eval_embeddings_query_fp16.pt", weights_only=False)
+        codes = torch.load("eval_embeddings_code_fp16.pt", weights_only=False)
     else:
         
         eval_dataset = PythonDataset(EVAL_DATASET_PATH, tokenizer, max_len=512)    
