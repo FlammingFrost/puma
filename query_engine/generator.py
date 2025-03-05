@@ -2,7 +2,10 @@
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain.schema import HumanMessage
-from configs.configurator import config_loader
+
+import os, sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from tools.configs.configurator import config_loader
 
 # Initialize the LLM model
 try:
