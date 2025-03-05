@@ -25,8 +25,8 @@ def eval():
         
         queries, codes = [], []
         with torch.no_grad():
-            query_emb = model_8bit(**query_enc)
-            code_emb = model_8bit(**code_enc)
+            query_emb = model_8bit(**query_enc).pooler_output
+            code_emb = model_8bit(**code_enc).pooler_output
             queries.append(query_emb)
             codes.append(code_emb)
     
@@ -79,8 +79,8 @@ def test():
         
         queries, codes = [], []
         with torch.no_grad():
-            query_emb = model_8bit(**query_enc)
-            code_emb = model_8bit(**code_enc)
+            query_emb = model_8bit(**query_enc).pooler_output
+            code_emb = model_8bit(**code_enc).pooler_output
             queries.append(query_emb)
             codes.append(code_emb)
     

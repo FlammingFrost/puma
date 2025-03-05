@@ -17,21 +17,26 @@ def eval():
     model_fp16 = AutoModel.from_pretrained(MODEL_NAME, torch_dtype=torch.float16, trust_remote_code=True).to("cuda")
     model_fp16.eval()
     
-    eval_dataset = PythonDataset(EVAL_DATASET_PATH, tokenizer, max_len=512)    
-    for query_enc, code_enc in tqdm(eval_dataset):
-        query_enc = {key: value.to("cuda") for key, value in query_enc.items()}
-        code_enc = {key: value.to("cuda") for key, value in code_enc.items()}
+    if os.path.exists("eval_embeddings_query_fp16.pt") and os.path.exists("eval_embeddings_code_fp16.pt"):
+        queries = torch.load("eval_embeddings_query_fp16.pt")
+        codes = torch.load("eval_embeddings_code_fp16.pt")
+    else:
         
-        queries, codes = [], []
-        with torch.no_grad():
-            query_emb = model_fp16(**query_enc)
-            code_emb = model_fp16(**code_enc)
-            queries.append(query_emb)
-            codes.append(code_emb)
-    
-    # save the embeddings
-    torch.save(queries, "eval_embeddings_query_fp16.pt")
-    torch.save(codes, "eval_embeddings_code_fp16.pt")
+        eval_dataset = PythonDataset(EVAL_DATASET_PATH, tokenizer, max_len=512)    
+        for query_enc, code_enc in tqdm(eval_dataset):
+            query_enc = {key: value.to("cuda") for key, value in query_enc.items()}
+            code_enc = {key: value.to("cuda") for key, value in code_enc.items()}
+            
+            queries, codes = [], []
+            with torch.no_grad():
+                query_emb = model_fp16(**query_enc).pooler_output
+                code_emb = model_fp16(**code_enc).pooler_output
+                queries.append(query_emb)
+                codes.append(code_emb)
+        
+        # save the embeddings
+        torch.save(queries, "eval_embeddings_query_fp16.pt")
+        torch.save(codes, "eval_embeddings_code_fp16.pt")
 
     # create a new vector-database for evaluation set
     db = Database(TEMP_VECTORSTORE_PATH)
@@ -78,8 +83,8 @@ def test():
         
         queries, codes = [], []
         with torch.no_grad():
-            query_emb = model_fp16(**query_enc)
-            code_emb = model_fp16(**code_enc)
+            query_emb = model_fp16(**query_enc).pooler_output
+            code_emb = model_fp16(**code_enc).pooler_output
             queries.append(query_emb)
             codes.append(code_emb)
     
