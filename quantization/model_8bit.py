@@ -14,8 +14,8 @@ TEST_DATASET_PATH = "data/python_dataset/test"
 TEMP_VECTORSTORE_PATH = "train/test_rag/temp_store"
 
 def eval():
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    model_8bit = AutoModel.from_pretrained(MODEL_NAME, load_in_8bit=True, device_map="auto")
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+    model_8bit = AutoModel.from_pretrained(MODEL_NAME, load_in_8bit=True, device_map="auto", trust_remote_code=True).to("cuda")
     model_8bit.eval()
     
     eval_dataset = PythonDataset(EVAL_DATASET_PATH, tokenizer, max_len=512)
@@ -67,8 +67,8 @@ def eval():
     os.rmdir(TEMP_VECTORSTORE_PATH)
     
 def test():
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    model_8bit = AutoModel.from_pretrained(MODEL_NAME, load_in_8bit=True, device_map="auto")
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+    model_8bit = AutoModel.from_pretrained(MODEL_NAME, load_in_8bit=True, device_map="auto", trust_remote_code=True).to("cuda")
     model_8bit.eval()
     
     test_dataset = PythonDataset(TEST_DATASET_PATH, tokenizer, max_len=512)

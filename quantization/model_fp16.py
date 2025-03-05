@@ -13,8 +13,8 @@ TEST_DATASET_PATH = "data/python_dataset/test"
 TEMP_VECTORSTORE_PATH = "train/test_rag/temp_store"
 
 def eval():
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    model_fp16 = AutoModel.from_pretrained(MODEL_NAME, torch_dtype=torch.float16).to("cuda")
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+    model_fp16 = AutoModel.from_pretrained(MODEL_NAME, torch_dtype=torch.float16, trust_remote_code=True).to("cuda")
     model_fp16.eval()
     
     eval_dataset = PythonDataset(EVAL_DATASET_PATH, tokenizer, max_len=512)    
@@ -66,8 +66,8 @@ def eval():
     os.rmdir(TEMP_VECTORSTORE_PATH)
     
 def test():
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    model_fp16 = AutoModel.from_pretrained(MODEL_NAME, torch_dtype=torch.float16).to("cuda")
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+    model_fp16 = AutoModel.from_pretrained(MODEL_NAME, torch_dtype=torch.float16, trust_remote_code=True).to("cuda")
     model_fp16.eval()
     
     test_dataset = PythonDataset(TEST_DATASET_PATH, tokenizer, max_len=512)
