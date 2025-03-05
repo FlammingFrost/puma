@@ -37,8 +37,8 @@ class PythonDataset(Dataset):
         query, code = self.query_code_pairs[idx]
         query_enc = self.tokenizer(query, return_tensors='pt', padding='max_length', truncation=True, max_length=self.max_len)
         code_enc = self.tokenizer(code, return_tensors='pt', padding='max_length', truncation=True, max_length=self.max_len)
-        query_enc = {key: value.squeeze(0) for key, value in query_enc.items()}
-        code_enc = {key: value.squeeze(0) for key, value in code_enc.items()}
+        query_enc = {key: value for key, value in query_enc.items()}
+        code_enc = {key: value for key, value in code_enc.items()}
         return query_enc, code_enc
 
 class PrecomputedEmbeddingsDataset(Dataset):
