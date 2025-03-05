@@ -1,4 +1,5 @@
 import torch
+import shutil
 from transformers import AutoTokenizer, AutoModel
 from tqdm import tqdm
 
@@ -39,6 +40,15 @@ def eval():
         torch.save(codes, "eval_embeddings_code_fp16.pt")
 
     # create a new vector-database for evaluation set
+    # delete the temp vector store
+    for file_name in os.listdir(TEMP_VECTORSTORE_PATH):
+        file_path = os.path.join(TEMP_VECTORSTORE_PATH, file_name)
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.remove(file_path)
+        elif os.path.isdir(file_path):
+            shutil.rmtree(file_path)
+    os.rmdir(TEMP_VECTORSTORE_PATH)
+    
     db = Database(TEMP_VECTORSTORE_PATH)
     for idx, (query_emb, code_emb) in tqdm(enumerate(zip(queries, codes)), total=len(queries), desc="Loading embeddings"):
         metadata = {}
@@ -65,11 +75,7 @@ def eval():
             f.write(f"Top5 Recall: {top5_recall:.4f}\n")
     except Exception as e:
         print(f"Error writing to file: {e}")
-    # delete the temp vector store
-    for file_name in os.listdir(TEMP_VECTORSTORE_PATH):
-        os.remove(os.path.join(TEMP_VECTORSTORE_PATH, file_name))
-    os.rmdir(TEMP_VECTORSTORE_PATH)
-    
+
 def test():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
     model_fp16 = AutoModel.from_pretrained(MODEL_NAME, torch_dtype=torch.float16, trust_remote_code=True).to("cuda")

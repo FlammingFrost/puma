@@ -1,4 +1,5 @@
 import torch
+import shutil
 # import bitsandbytes as bnb
 from transformers import AutoTokenizer, AutoModel
 from tqdm import tqdm
@@ -63,7 +64,11 @@ def eval():
         print(f"Error writing to file: {e}")
     # delete the temp vector store
     for file_name in os.listdir(TEMP_VECTORSTORE_PATH):
-        os.remove(os.path.join(TEMP_VECTORSTORE_PATH, file_name))
+        file_path = os.path.join(TEMP_VECTORSTORE_PATH, file_name)
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.remove(file_path)
+        elif os.path.isdir(file_path):
+            shutil.rmtree(file_path)
     os.rmdir(TEMP_VECTORSTORE_PATH)
     
 def test():
