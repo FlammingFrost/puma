@@ -22,12 +22,13 @@ def eval():
         queries = torch.load("eval_embeddings_query_fp16.pt", weights_only=False)
         codes = torch.load("eval_embeddings_code_fp16.pt", weights_only=False)
     else:
-        eval_dataset = PythonDataset(EVAL_DATASET_PATH, tokenizer, max_len=512)    
+        eval_dataset = PythonDataset(EVAL_DATASET_PATH, tokenizer, max_len=512)  
+        queries, codes = [], []  
         for query_enc, code_enc in tqdm(eval_dataset):
             query_enc = {key: value.to("cuda") for key, value in query_enc.items()}
             code_enc = {key: value.to("cuda") for key, value in code_enc.items()}
             
-            queries, codes = [], []
+            
             with torch.no_grad():
                 if len(queries) > 100: break
                 query_emb = model_fp16(**query_enc).pooler_output
