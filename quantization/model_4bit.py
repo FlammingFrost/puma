@@ -1,4 +1,5 @@
 import torch
+import shutil
 # import bitsandbytes as bnb
 from transformers import AutoTokenizer, AutoModel
 from tqdm import tqdm
@@ -18,23 +19,37 @@ def eval():
     model_4bit = AutoModel.from_pretrained(MODEL_NAME, load_in_4bit=True, device_map="auto", trust_remote_code=True).to("cuda")
     model_4bit.eval()
     
-    eval_dataset = PythonDataset(EVAL_DATASET_PATH, tokenizer, max_len=512)
-    for query_enc, code_enc in tqdm(eval_dataset):
-        query_enc = {key: value.to("cuda") for key, value in query_enc.items()}
-        code_enc = {key: value.to("cuda") for key, value in code_enc.items()}
-        
+    if os.path.exists("eval_embeddings_query_4bit.pt") and os.path.exists("eval_embeddings_code_4bit.pt"):
+        queries = torch.load("eval_embeddings_query_4bit.pt", weights_only=False)
+        codes = torch.load("eval_embeddings_code_4bit.pt", weights_only=False)
+    else:
+        eval_dataset = PythonDataset(EVAL_DATASET_PATH, tokenizer, max_len=512)
         queries, codes = [], []
-        with torch.no_grad():
-            query_emb = model_4bit(**query_enc).pooler_output
-            code_emb = model_4bit(**code_enc).pooler_output
-            queries.append(query_emb)
-            codes.append(code_emb)
-    
-    # save the embeddings
-    torch.save(queries, "eval_embeddings_query_4bit.pt")
-    torch.save(codes, "eval_embeddings_code_4bit.pt")
+        for query_enc, code_enc in tqdm(eval_dataset):
+            query_enc = {key: value.to("cuda") for key, value in query_enc.items()}
+            code_enc = {key: value.to("cuda") for key, value in code_enc.items()}
+            
+            with torch.no_grad():
+                query_emb = model_4bit(**query_enc).pooler_output
+                code_emb = model_4bit(**code_enc).pooler_output
+                queries.append(query_emb)
+                codes.append(code_emb)
+                assert type(query_emb) == torch.Tensor, "Query embeddings should be a PyTorch tensor"
+        
+        # save the embeddings
+        torch.save(queries, "eval_embeddings_query_4bit.pt")
+        torch.save(codes, "eval_embeddings_code_4bit.pt")
 
     # create a new vector-database for evaluation set
+    # delete the temp vector store
+    for file_name in os.listdir(TEMP_VECTORSTORE_PATH):
+        file_path = os.path.join(TEMP_VECTORSTORE_PATH, file_name)
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.remove(file_path)
+        elif os.path.isdir(file_path):
+            shutil.rmtree(file_path)
+    os.rmdir(TEMP_VECTORSTORE_PATH)
+    
     db = Database(TEMP_VECTORSTORE_PATH)
     for idx, (query_emb, code_emb) in tqdm(enumerate(zip(queries, codes)), total=len(queries), desc="Loading embeddings"):
         metadata = {}
@@ -61,11 +76,7 @@ def eval():
             f.write(f"Top5 Recall: {top5_recall:.4f}\n")
     except Exception as e:
         print(f"Error writing to file: {e}")
-    # delete the temp vector store
-    for file_name in os.listdir(TEMP_VECTORSTORE_PATH):
-        os.remove(os.path.join(TEMP_VECTORSTORE_PATH, file_name))
-    os.rmdir(TEMP_VECTORSTORE_PATH)
-    
+
 def test():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
     model_4bit = AutoModel.from_pretrained(MODEL_NAME, load_in_4bit=True, device_map="auto", trust_remote_code=True).to("cuda")
@@ -89,6 +100,14 @@ def test():
     torch.save(codes, "test_embeddings_code_4bit.pt")
 
     # create a new vector-database for evaluation set
+    for file_name in os.listdir(TEMP_VECTORSTORE_PATH):
+        file_path = os.path.join(TEMP_VECTORSTORE_PATH, file_name)
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.remove(file_path)
+        elif os.path.isdir(file_path):
+            shutil.rmtree(file_path)
+    os.rmdir(TEMP_VECTORSTORE_PATH)
+    
     db = Database(TEMP_VECTORSTORE_PATH)
     for idx, (query_emb, code_emb) in tqdm(enumerate(zip(queries, codes)), total=len(queries), desc="Loading embeddings"):
         metadata = {}
@@ -115,7 +134,3 @@ def test():
             f.write(f"Top5 Recall: {top5_recall:.4f}\n")
     except Exception as e:
         print(f"Error writing to file: {e}")
-    # delete the temp vector store
-    for file_name in os.listdir(TEMP_VECTORSTORE_PATH):
-        os.remove(os.path.join(TEMP_VECTORSTORE_PATH, file_name))
-    os.rmdir(TEMP_VECTORSTORE_PATH)
