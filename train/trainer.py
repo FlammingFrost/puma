@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 
 import sys
@@ -93,6 +94,7 @@ class MappingBlockTrainer:
                 query_emb, code_emb = batch
                 query_emb = query_emb.to(self.device)
                 code_emb = code_emb.to(self.device)
+                code_emb = F.normalize(code_emb, p=2, dim=1)
                 
                 # Forward pass  
                 with torch.amp.autocast("cuda"):

@@ -67,6 +67,7 @@ class MLP(nn.Module):
             mapped_emb = self.layer_norm(input_emb + self.network(input_emb))
         else:
             mapped_emb = self.network(input_emb)
+        mapped_emb = F.normalize(mapped_emb, p=2, dim=1)
         return mapped_emb
 
 class FFN(nn.Module):
@@ -90,6 +91,7 @@ class FFN(nn.Module):
             mapped_emb = self.layer_norm(input_emb + self.network(input_emb))
         else:
             mapped_emb = self.network(input_emb)
+        mapped_emb = F.normalize(mapped_emb, p=2, dim=1)
         return mapped_emb
 
 class Embedder(nn.Module):
