@@ -11,7 +11,8 @@ from retrieval.database import Database
 MODEL_NAME = "jinaai/jina-embeddings-v2-base-code"
 EVAL_DATASET_PATH = "data/python_dataset/valid"
 TEST_DATASET_PATH = "data/python_dataset/test"
-TEMP_VECTORSTORE_PATH = "train/test_rag/temp_store"
+TEMP_VECTORSTORE_PATH_EVAL = "train/test_rag/temp_store_eval_fp16"
+TEMP_VECTORSTORE_PATH_TEST = "train/test_rag/temp_store_test_fp16"
 
 def eval():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
@@ -42,6 +43,7 @@ def eval():
 
     # create a new vector-database for evaluation set
     # delete the temp vector store
+    TEMP_VECTORSTORE_PATH = TEMP_VECTORSTORE_PATH_EVAL
     if os.path.exists(TEMP_VECTORSTORE_PATH):
         for file_name in os.listdir(TEMP_VECTORSTORE_PATH):
             file_path = os.path.join(TEMP_VECTORSTORE_PATH, file_name)
@@ -83,24 +85,29 @@ def test():
     model_fp16 = AutoModel.from_pretrained(MODEL_NAME, torch_dtype=torch.float16, trust_remote_code=True).to("cuda")
     model_fp16.eval()
     
-    test_dataset = PythonDataset(TEST_DATASET_PATH, tokenizer, max_len=512)
-    
-    for query_enc, code_enc in tqdm(test_dataset):
-        query_enc = {key: value.to("cuda") for key, value in query_enc.items()}
-        code_enc = {key: value.to("cuda") for key, value in code_enc.items()}
-        
+    if os.path.exists("test_embeddings_query_fp16.pt") and os.path.exists("test_embeddings_code_fp16.pt"):
+        queries = torch.load("test_embeddings_query_fp16.pt", weights_only=False)
+        codes = torch.load("test_embeddings_code_fp16.pt", weights_only=False)
+    else:
+        test_dataset = PythonDataset(TEST_DATASET_PATH, tokenizer, max_len=512)
         queries, codes = [], []
-        with torch.no_grad():
-            query_emb = model_fp16(**query_enc).pooler_output
-            code_emb = model_fp16(**code_enc).pooler_output
-            queries.append(query_emb)
-            codes.append(code_emb)
-    
-    # save the embeddings
-    torch.save(queries, "test_embeddings_query_fp16.pt")
-    torch.save(codes, "test_embeddings_code_fp16.pt")
+        for query_enc, code_enc in tqdm(test_dataset):
+            query_enc = {key: value.to("cuda") for key, value in query_enc.items()}
+            code_enc = {key: value.to("cuda") for key, value in code_enc.items()}
+            
+            with torch.no_grad():
+                query_emb = model_fp16(**query_enc).pooler_output
+                code_emb = model_fp16(**code_enc).pooler_output
+                queries.append(query_emb)
+                codes.append(code_emb)
+                assert type(query_emb) == torch.Tensor, "Query embeddings should be a PyTorch tensor"
+        
+        # save the embeddings
+        torch.save(queries, "test_embeddings_query_fp16.pt")
+        torch.save(codes, "test_embeddings_code_fp16.pt")
 
     # create a new vector-database for evaluation set
+    TEMP_VECTORSTORE_PATH = TEMP_VECTORSTORE_PATH_TEST
     if os.path.exists(TEMP_VECTORSTORE_PATH):
         for file_name in os.listdir(TEMP_VECTORSTORE_PATH):
             file_path = os.path.join(TEMP_VECTORSTORE_PATH, file_name)
@@ -131,9 +138,8 @@ def test():
     print(f"Top5 Recall: {top5_recall:.4f}")
     
     try:
-        with open("quantization/eval_results_fp16.txt", "a") as f:
+        with open("quantization/test_results_fp16.txt", "a") as f:
             f.write(f"Top1 Recall: {top1_recall:.4f}\n")
             f.write(f"Top5 Recall: {top5_recall:.4f}\n")
     except Exception as e:
         print(f"Error writing to file: {e}")
-        
