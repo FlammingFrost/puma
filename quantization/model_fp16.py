@@ -42,13 +42,14 @@ def eval():
 
     # create a new vector-database for evaluation set
     # delete the temp vector store
-    for file_name in os.listdir(TEMP_VECTORSTORE_PATH):
-        file_path = os.path.join(TEMP_VECTORSTORE_PATH, file_name)
-        if os.path.isfile(file_path) or os.path.islink(file_path):
-            os.remove(file_path)
-        elif os.path.isdir(file_path):
-            shutil.rmtree(file_path)
-    os.rmdir(TEMP_VECTORSTORE_PATH)
+    if os.path.exists(TEMP_VECTORSTORE_PATH):
+        for file_name in os.listdir(TEMP_VECTORSTORE_PATH):
+            file_path = os.path.join(TEMP_VECTORSTORE_PATH, file_name)
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.remove(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        os.rmdir(TEMP_VECTORSTORE_PATH)
     
     db = Database(TEMP_VECTORSTORE_PATH)
     for idx, (query_emb, code_emb) in tqdm(enumerate(zip(queries, codes)), total=len(queries), desc="Loading embeddings"):
@@ -100,13 +101,14 @@ def test():
     torch.save(codes, "test_embeddings_code_fp16.pt")
 
     # create a new vector-database for evaluation set
-    for file_name in os.listdir(TEMP_VECTORSTORE_PATH):
-        file_path = os.path.join(TEMP_VECTORSTORE_PATH, file_name)
-        if os.path.isfile(file_path) or os.path.islink(file_path):
-            os.remove(file_path)
-        elif os.path.isdir(file_path):
-            shutil.rmtree(file_path)
-    os.rmdir(TEMP_VECTORSTORE_PATH)
+    if os.path.exists(TEMP_VECTORSTORE_PATH):
+        for file_name in os.listdir(TEMP_VECTORSTORE_PATH):
+            file_path = os.path.join(TEMP_VECTORSTORE_PATH, file_name)
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.remove(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        os.rmdir(TEMP_VECTORSTORE_PATH)
     
     db = Database(TEMP_VECTORSTORE_PATH)
     for idx, (query_emb, code_emb) in tqdm(enumerate(zip(queries, codes)), total=len(queries), desc="Loading embeddings"):
