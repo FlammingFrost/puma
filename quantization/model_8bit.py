@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from data.python_dataset import PythonDataset
+from train.dataset_python import PythonDataset
 from retrieval.database import Database
 
 MODEL_NAME = "jinaai/jina-embeddings-v2-base-code"
