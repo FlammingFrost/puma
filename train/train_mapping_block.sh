@@ -19,7 +19,7 @@ python train/train.py \
     --batch_size 1024 \
     --learning_rate 2e-5 \
     --device cuda \
-    --train_query_emb_path $2 \
+    --train_query_emb_path models/embeddings/small_train_embeddings_query.pt \
     --train_code_emb_path models/embeddings/train_embeddings_code.pt \
     --eval_query_emb_path models/embeddings/small_eval_embeddings_query.pt \
     --eval_code_emb_path models/embeddings/eval_embeddings_code.pt \
