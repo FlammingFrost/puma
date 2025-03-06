@@ -27,6 +27,7 @@ cache/
 # Vector database files
 train/test_rag/
 train/results/
+quantization/*.txt
 
 
 # Large model files (if downloaded)
