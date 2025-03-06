@@ -1,16 +1,12 @@
 #!/bin/bash
 
-if [ "$#" -ne 6 ]; then
-    echo "Usage: $0 <mapping_block> <train_query_emb_path> <train_code_emb_path> <eval_query_emb_path> <eval_code_emb_path> <residual>"
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 <mapping_block> <residual>"
     exit 1
 fi
 
 MAPPING_BLOCK=$1
-TRAIN_QUERY_EMB_PATH=$2
-TRAIN_CODE_EMB_PATH=$3
-EVAL_QUERY_EMB_PATH=$4
-EVAL_CODE_EMB_PATH=$5
-RESIDUAL=$6
+RESIDUAL=$2
 
 python train/train.py \
     --mapping_block $MAPPING_BLOCK \
@@ -19,12 +15,12 @@ python train/train.py \
     --tokenizer_name jinaai/jina-embeddings-v2-base-code \
     --base_model_name jinaai/jina-embeddings-v2-base-code \
     --max_len 512 \
-    --epochs 200 \
-    --batch_size 4096 \
+    --epochs 100 \
+    --batch_size 1024 \
     --learning_rate 2e-5 \
     --device cuda \
-    --train_query_emb_path $TRAIN_QUERY_EMB_PATH \
-    --train_code_emb_path $TRAIN_CODE_EMB_PATH \
-    --eval_query_emb_path $EVAL_QUERY_EMB_PATH \
-    --eval_code_emb_path $EVAL_CODE_EMB_PATH \
+    --train_query_emb_path $2 \
+    --train_code_emb_path models/embeddings/train_embeddings_code.pt \
+    --eval_query_emb_path models/embeddings/small_eval_embeddings_query.pt \
+    --eval_code_emb_path models/embeddings/eval_embeddings_code.pt \
     --residual $RESIDUAL

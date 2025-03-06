@@ -13,3 +13,4 @@ python train.py \
     --tokenizer_name $BASE_MODEL_NAME \
     --batch_size 512 \
     --max_len 512
+

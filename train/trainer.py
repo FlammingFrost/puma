@@ -66,7 +66,7 @@ class MappingBlockTrainer:
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=1, gamma=0.1)
+        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=self.epochs)
 
     def train(self):
         """Trains the Query Transformer using Cosine Similarity Loss."""
