@@ -16,7 +16,7 @@ TEMP_VECTORSTORE_PATH_EVAL = "train/test_rag/temp_store_eval_8bit"
 TEMP_VECTORSTORE_PATH_TEST = "train/test_rag/temp_store_test_8bit"
 def eval():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
-    model_8bit = AutoModel.from_pretrained(MODEL_NAME, load_in_8bit=True, device_map="auto", trust_remote_code=True).to("cuda")
+    model_8bit = AutoModel.from_pretrained(MODEL_NAME, load_in_8bit=True, device_map="auto", trust_remote_code=True)
     model_8bit.eval()
     
     if os.path.exists("eval_embeddings_query_8bit.pt") and os.path.exists("eval_embeddings_code_8bit.pt"):
@@ -81,7 +81,7 @@ def eval():
 
 def test():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
-    model_8bit = AutoModel.from_pretrained(MODEL_NAME, load_in_8bit=True, device_map="auto", trust_remote_code=True).to("cuda")
+    model_8bit = AutoModel.from_pretrained(MODEL_NAME, load_in_8bit=True, device_map="auto", trust_remote_code=True)
     model_8bit.eval()
     
     if os.path.exists("test_embeddings_query_8bit.pt") and os.path.exists("test_embeddings_code_8bit.pt"):

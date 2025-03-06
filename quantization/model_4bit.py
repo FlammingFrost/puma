@@ -16,7 +16,7 @@ TEMP_VECTORSTORE_PATH_TEST = "train/test_rag/temp_store_test_4bit"
 
 def eval():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
-    model_4bit = AutoModel.from_pretrained(MODEL_NAME, load_in_4bit=True, device_map="auto", trust_remote_code=True).to("cuda")
+    model_4bit = AutoModel.from_pretrained(MODEL_NAME, load_in_4bit=True, device_map="auto", trust_remote_code=True)
     model_4bit.eval()
     
     if os.path.exists("eval_embeddings_query_4bit.pt") and os.path.exists("eval_embeddings_code_4bit.pt"):
@@ -81,7 +81,7 @@ def eval():
 
 def test():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
-    model_4bit = AutoModel.from_pretrained(MODEL_NAME, load_in_4bit=True, device_map="auto", trust_remote_code=True).to("cuda")
+    model_4bit = AutoModel.from_pretrained(MODEL_NAME, load_in_4bit=True, device_map="auto", trust_remote_code=True)
     model_4bit.eval()
     
     if os.path.exists("test_embeddings_query_4bit.pt") and os.path.exists("test_embeddings_code_4bit.pt"):
