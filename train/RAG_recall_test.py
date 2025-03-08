@@ -47,6 +47,9 @@ def test_embedding_quality(query_embeddings_path, code_embeddings_path, vector_s
     
     print(f"Top1 Recall: {top1_recall:.8f}")
     print(f"Top{top_k} Recall: {topk_recall:.8f}")
+    with open(f'final_report/recall_{test_name}.txt', 'w') as f:
+        f.write(f"Top1 Recall: {top1_recall:.8f}\n")
+        f.write(f"Top{top_k} Recall: {topk_recall:.8f}\n")
     
     # Step 6: Save retrieval counts to CSV
     os.makedirs('final_report', exist_ok=True)
