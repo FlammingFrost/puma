@@ -76,7 +76,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_code_emb_path", type=str, default="models/embeddings/train_code_embeddings.pt", help="Path to the training code embeddings")
     parser.add_argument("--eval_query_emb_path", type=str, default="models/embeddings/eval_query_embeddings.pt", help="Path to the evaluation query embeddings")
     parser.add_argument("--eval_code_emb_path", type=str, default="models/embeddings/eval_code_embeddings.pt", help="Path to the evaluation code embeddings")
-    parser.add_argument("--ffn_nblocks", type=int, default=4, help="Number of FFN blocks")
+    parser.add_argument("--ffn_nblocks", type=int, help="Number of FFN blocks")
     
     args = parser.parse_args()
     if args.task == "mapping":
