@@ -73,25 +73,31 @@ class MLP(nn.Module):
 
 class FFN(nn.Module):
     """
-    Defines the Feed Forward Network (FFN) layer. It's a simple 2-layer MLP with residual connection.
+    Defines the Feed Forward Network (FFN) layer. It's a multi-layer MLP with residual connections and layer normalization.
     """
-    def __init__(self, input_dim=768, hidden_dim=512, output_dim=768, residual=True):
+    def __init__(self, input_dim=768, hidden_dim=512, output_dim=768, num_layers=4, residual=True):
         super(FFN, self).__init__()
-        self.network = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, output_dim)
-        )
-        self.layer_norm = nn.LayerNorm(input_dim)
+        self.layers = nn.ModuleList()
         self.residual = residual
+        self.layer_norms = nn.ModuleList()
+
+        for _ in range(num_layers):
+            self.layers.append(nn.Sequential(
+                nn.Linear(input_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Linear(hidden_dim, output_dim)
+            ))
+            self.layer_norms.append(nn.LayerNorm(input_dim))
+
         print(f'Number of parameters in FFN: {sum(p.numel() for p in self.parameters())}')
 
     def forward(self, input_emb):
-        if self.residual:
-            mapped_emb = self.layer_norm(input_emb + self.network(input_emb))
-        else:
-            mapped_emb = self.network(input_emb)
-        mapped_emb = F.normalize(mapped_emb, p=2, dim=1)
+        for layer, layer_norm in zip(self.layers, self.layer_norms):
+            if self.residual:
+                input_emb = layer_norm(input_emb + layer(input_emb))
+            else:
+                input_emb = layer(input_emb)
+        mapped_emb = F.normalize(input_emb, p=2, dim=1)
         return mapped_emb
 
 class Embedder(nn.Module):

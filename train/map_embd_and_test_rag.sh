@@ -1,7 +1,8 @@
 python train/evaluations/mlp_eval.py \
     --mapping_block $1 \
     --model_path $2 \
-    --transformed_query_embeddings_path $3
+    --transformed_query_embeddings_path $3 \
+    --residual $6
 
 python train/test_rag.py \
     --query_embeddings_path $3 \

@@ -11,12 +11,12 @@ from retrieval.embedder import MLP
 
 # Load MLP model and evaluate it on test query embeddings
 
-def load_model(model_path, input_dim, hidden_dim, output_dim, device, mapping_block):
+def load_model(model_path, input_dim, hidden_dim, output_dim, device, mapping_block, residual=False):
     if mapping_block == 'MLP':
-        model = MLP(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim)
+        model = MLP(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim, residual=residual)
     elif mapping_block == 'FFN':
         from retrieval.embedder import FFN
-        model = FFN(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim)
+        model = FFN(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim, residual=residual)
     model.load_state_dict(torch.load(model_path))
     model.to(device).eval()
     return model
@@ -37,7 +37,7 @@ def main(args):
     hidden_dim = 512
     output_dim = 768
     
-    model = load_model(args.model_path, input_dim, hidden_dim, output_dim, args.device, args.mapping_block)
+    model = load_model(args.model_path, input_dim, hidden_dim, output_dim, args.device, args.mapping_block, args.residual)
     
     # Load the test query and code embeddings
     test_query_embeddings = torch.load(args.test_query_embeddings_path).to(args.device)
@@ -63,6 +63,7 @@ if __name__ == "__main__":
     parser.add_argument("--transformed_query_embeddings_path", type=str, help="Path to save the transformed query embeddings", default="models/embeddings/test_embeddings_query_mlp.pt")
     parser.add_argument("--device", type=str, help="Device to use (cpu or cuda)", default="cuda")
     parser.add_argument("--cosine_similarities_path", type=str, help="Path to save the cosine similarities", default="models/embeddings/cosine_similarities.npy")
+    parser.add_argument("--residual", type=bool, help="Whether to add residual connection in the mapping block", default=False)
     args = parser.parse_args()
     
     main(args)
