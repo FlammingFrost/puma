@@ -2,6 +2,9 @@ import torch
 from retrieval.database import Database
 from dataset_python import PrecomputedEmbeddingsDataset
 from tqdm import tqdm
+import csv
+import matplotlib.pyplot as plt
+import os
 
 def test_embedding_quality(query_embeddings_path, code_embeddings_path, vector_store_path, top_k=5, test_name='dummy'):
     # Step 1: Initialize a chromadb database for vector retrieval
@@ -15,6 +18,8 @@ def test_embedding_quality(query_embeddings_path, code_embeddings_path, vector_s
         metadata = {}
         code_id = f'code_{idx}'
         db.insert_embedding(code_emb.view(-1).tolist(), code_id, metadata)
+    
+    retrieval_counts = [0] * len(dataset)
     
     # Step 4: Evaluate retrieval
     correct_top1 = 0
@@ -31,13 +36,37 @@ def test_embedding_quality(query_embeddings_path, code_embeddings_path, vector_s
             correct_top1 += 1
         if f'code_{idx}' in retrieved_ids[:top_k]:
             correct_topk += 1
+        
+        for retrieved_id in retrieved_ids:
+            retrieved_idx = int(retrieved_id.split('_')[1])
+            retrieval_counts[retrieved_idx] += 1
     
     # Step 5: Record the Top1 and Topk recall
     top1_recall = correct_top1 / total
     topk_recall = correct_topk / total
     
-    print(f"Top1 Recall: {top1_recall:.4f}")
-    print(f"Top{top_k} Recall: {topk_recall:.4f}")
+    print(f"Top1 Recall: {top1_recall:.8f}")
+    print(f"Top{top_k} Recall: {topk_recall:.8f}")
+    
+    # Step 6: Save retrieval counts to CSV
+    os.makedirs('final_report', exist_ok=True)
+    with open(f'final_report/retrieval_counts_{test_name}.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['Index', 'Frequency'])
+        for idx, count in enumerate(retrieval_counts):
+            writer.writerow([idx, count])
+    
+    # Step 7: Plot accumulated density
+    sorted_counts = sorted(retrieval_counts)
+    accumulated_density = [sum(sorted_counts[:i+1]) for i in range(len(sorted_counts))]
+    
+    plt.figure()
+    plt.plot(range(len(accumulated_density)), accumulated_density)
+    plt.xlabel('Index')
+    plt.ylabel('Accumulated Density')
+    plt.title('Accumulated Density with respect to Index')
+    plt.savefig(f'final_report/accumulated_density_{test_name}.png')
+    plt.show()
 
 if __name__ == "__main__":
     query_embeddings_path = "embeddings_query.pt" # TODO: Replace with actual path

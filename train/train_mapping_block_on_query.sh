@@ -23,4 +23,5 @@ python train/train.py \
     --train_code_emb_path models/embeddings/train_embeddings_query.pt \
     --eval_query_emb_path models/embeddings/small_eval_embeddings_query.pt \
     --eval_code_emb_path models/embeddings/eval_embeddings_code.pt \
-    --residual $RESIDUAL
+    --residual $RESIDUAL \
+    --save_path models/${MAPPING_BLOCK}_residual_${RESIDUAL}_on_queries.pth

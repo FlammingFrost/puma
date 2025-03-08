@@ -43,11 +43,9 @@ def main(args):
     )
     
     trainer.train()
-    # add time to save path
-    import time
-    save_path = "models/"+args.mapping_block+"_"+str(time.time())+".pth"
-    trainer.save_trained_model(path=save_path)
-    print(f"Model saved to {save_path}")
+
+    trainer.save_trained_model(path=args.save_path)
+    print(f"Model saved to {args.save_path}")
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train MLPEmbedder model")
@@ -66,7 +64,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=8, help="Batch size")
     parser.add_argument("--learning_rate", type=float, default=2e-5, help="Learning rate")
     parser.add_argument("--device", type=str, default="cuda", help="Device to train on (cpu or cuda)")
-    # parser.add_argument("--save_path", type=str, default="None", help="Path to save the trained model")
+    parser.add_argument("--save_path", type=str, default="None", help="Path to save the trained model")
     parser.add_argument("--train_query_emb_path", type=str, default="models/embeddings/train_query_embeddings.pt", help="Path to the training query embeddings")
     parser.add_argument("--train_code_emb_path", type=str, default="models/embeddings/train_code_embeddings.pt", help="Path to the training code embeddings")
     parser.add_argument("--eval_query_emb_path", type=str, default="models/embeddings/eval_query_embeddings.pt", help="Path to the evaluation query embeddings")

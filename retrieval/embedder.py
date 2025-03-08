@@ -61,6 +61,7 @@ class MLP(nn.Module):
         )
         self.layer_norm = nn.LayerNorm(input_dim)
         self.residual = residual
+        print(f'Number of parameters in MLP: {sum(p.numel() for p in self.parameters())}')
 
     def forward(self, input_emb):
         if self.residual:
@@ -79,12 +80,11 @@ class FFN(nn.Module):
         self.network = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, output_dim),
-            nn.ReLU(),
-            nn.Linear(output_dim, input_dim),
+            nn.Linear(hidden_dim, output_dim)
         )
         self.layer_norm = nn.LayerNorm(input_dim)
         self.residual = residual
+        print(f'Number of parameters in FFN: {sum(p.numel() for p in self.parameters())}')
 
     def forward(self, input_emb):
         if self.residual:
