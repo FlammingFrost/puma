@@ -80,6 +80,10 @@ class FFN(nn.Module):
         self.layers = nn.ModuleList()
         self.residual = residual
         self.layer_norms = nn.ModuleList()
+        
+        if num_layers == 0:
+            self.layers.append(nn.Linear(input_dim, output_dim))
+            self.layer_norms.append(nn.LayerNorm(input_dim))
 
         for _ in range(num_layers):
             self.layers.append(nn.Sequential(
