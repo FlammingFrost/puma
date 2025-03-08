@@ -28,7 +28,7 @@ def main(args):
     if args.mapping_block == "MLP":
         embedder = MLP(input_dim=768, hidden_dim=512, output_dim=768, residual=args.residual)
     elif args.mapping_block == "FFN":
-        embedder = FFN(input_dim=768, hidden_dim=512, output_dim=768, residual=args.residual)
+        embedder = FFN(input_dim=768, hidden_dim=512, output_dim=768, residual=args.residual, num_layers=args.ffn_nblocks)
     else:
         raise ValueError("Mapping block must be either 'MLP' or 'FFN'")
     
@@ -48,11 +48,18 @@ def main(args):
     print(f"Model saved to {args.save_path}")
     
 if __name__ == "__main__":
+    def str2bool(v):
+        if v.lower() in ('yes', 'true', 't', 'y', '1'):
+            return True
+        elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+            return False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected')
     parser = argparse.ArgumentParser(description="Train MLPEmbedder model")
     parser.add_argument("--task", type=str, default="mapping", help="Task to perform (mapping or retrieval)")
     parser.add_argument("--embed_subset", type=str, default="both", help="Subset of embeddings to use (query or code or both)")
     parser.add_argument("--mapping_block", type=str, default="MLP", help="Mapping block to use (MLP or FFN)")
-    parser.add_argument("--residual", type=bool, default=True, help="Whether to use residual connections in the mapping block")
+    parser.add_argument("--residual", type=str2bool, default=False, help="Use residual connection in mapping block")
     parser.add_argument("--emb_name", type=str, default="default", help="Name of the embeddings saved")
     
     parser.add_argument("--train_data", type=str,  help="Path to the training data", default="data/python_dataset/train")
@@ -69,7 +76,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_code_emb_path", type=str, default="models/embeddings/train_code_embeddings.pt", help="Path to the training code embeddings")
     parser.add_argument("--eval_query_emb_path", type=str, default="models/embeddings/eval_query_embeddings.pt", help="Path to the evaluation query embeddings")
     parser.add_argument("--eval_code_emb_path", type=str, default="models/embeddings/eval_code_embeddings.pt", help="Path to the evaluation code embeddings")
-    # parser.add_argument("--subset_size", type=int, default=10, help="Number of examples to load for quick experimentation")
+    parser.add_argument("--ffn_nblocks", type=int, default=4, help="Number of FFN blocks")
     
     args = parser.parse_args()
     if args.task == "mapping":

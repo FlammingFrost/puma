@@ -50,12 +50,20 @@ def main(args):
     # Calculate the cosine similarity between the transformed query embeddings and the code embeddings
     cosine_similarities = F.cosine_similarity(transformed_query_embeddings, test_code_embeddings, dim=1)
     
-    np.save(args.cosine_similarities_path, cosine_similarities.cpu().numpy())
+    similarity_path = "models/embeddings/"+args.transformed_query_embeddings_path.split('/')[-1].split('.')[0] + '_cosine_similarities.npy'
+    np.save(similarity_path, cosine_similarities.cpu().numpy())
     
     
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    def str2bool(v):
+        if v.lower() in ('yes', 'true', 't', 'y', '1'):
+            return True
+        elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+            return False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected')
     parser.add_argument("--mapping_block", type=str, default='FFN', help="Mapping block to use (MLP or Linear or FFN)")
     parser.add_argument("--model_path", type=str, help="Path to the stored MLP model", default="models/MLPEmbedder_finetune2.pth")
     parser.add_argument("--test_query_embeddings_path", type=str, help="Path to the test query embeddings", default="models/embeddings/test_embeddings_query.pt")
@@ -63,7 +71,7 @@ if __name__ == "__main__":
     parser.add_argument("--transformed_query_embeddings_path", type=str, help="Path to save the transformed query embeddings", default="models/embeddings/test_embeddings_query_mlp.pt")
     parser.add_argument("--device", type=str, help="Device to use (cpu or cuda)", default="cuda")
     parser.add_argument("--cosine_similarities_path", type=str, help="Path to save the cosine similarities", default="models/embeddings/cosine_similarities.npy")
-    parser.add_argument("--residual", type=bool, help="Whether to add residual connection in the mapping block", default=False)
+    parser.add_argument("--residual", type=str2bool, default=False, help="Whether to use residual connection in the mapping block")
     args = parser.parse_args()
     
     main(args)
