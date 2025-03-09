@@ -14,10 +14,10 @@ def test_embedding_quality(query_embeddings_path, code_embeddings_path, vector_s
     dataset = PrecomputedEmbeddingsDataset(query_embeddings_path, code_embeddings_path)
     
     # Step 3: Load code embeddings into vectorbase with unique ids
-    for idx, (query_emb, code_emb) in tqdm(enumerate(dataset), total=len(dataset), desc="Loading embeddings"):
-        metadata = {}
-        code_id = f'code_{idx}'
-        db.insert_embedding(code_emb.view(-1).tolist(), code_id, metadata)
+    # for idx, (query_emb, code_emb) in tqdm(enumerate(dataset), total=len(dataset), desc="Loading embeddings"):
+    #     metadata = {}
+    #     code_id = f'code_{idx}'
+    #     db.insert_embedding(code_emb.view(-1).tolist(), code_id, metadata)
     
     retrieval_counts = [0] * len(dataset)
     
