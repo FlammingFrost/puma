@@ -75,7 +75,7 @@ class FFN(nn.Module):
     """
     Defines the Feed Forward Network (FFN) layer. It's a multi-layer MLP with residual connections, layer normalization, and dropout.
     """
-    def __init__(self, input_dim=768, hidden_dim=512, output_dim=768, num_layers=4, residual=True, dropout=0.1):
+    def __init__(self, input_dim=768, hidden_dim=512, output_dim=768, num_layers=4, residual=True, dropout=0):
         super(FFN, self).__init__()
         self.layers = nn.ModuleList()
         self.residual = residual
