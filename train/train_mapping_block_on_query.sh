@@ -15,7 +15,7 @@ python train/train.py \
     --tokenizer_name jinaai/jina-embeddings-v2-base-code \
     --base_model_name jinaai/jina-embeddings-v2-base-code \
     --max_len 512 \
-    --epochs 200 \
+    --epochs 100 \
     --batch_size 1024 \
     --learning_rate 2e-5 \
     --device cuda \
