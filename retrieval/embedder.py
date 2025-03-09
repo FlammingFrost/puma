@@ -73,17 +73,19 @@ class MLP(nn.Module):
 
 class FFN(nn.Module):
     """
-    Defines the Feed Forward Network (FFN) layer. It's a multi-layer MLP with residual connections and layer normalization.
+    Defines the Feed Forward Network (FFN) layer. It's a multi-layer MLP with residual connections, layer normalization, and dropout.
     """
-    def __init__(self, input_dim=768, hidden_dim=512, output_dim=768, num_layers=4, residual=True):
+    def __init__(self, input_dim=768, hidden_dim=512, output_dim=768, num_layers=4, residual=True, dropout=0.1):
         super(FFN, self).__init__()
         self.layers = nn.ModuleList()
         self.residual = residual
         self.layer_norms = nn.ModuleList()
+        self.dropouts = nn.ModuleList()
         
         if num_layers == 0:
             self.layers.append(nn.Linear(input_dim, output_dim))
             self.layer_norms.append(nn.LayerNorm(input_dim))
+            self.dropouts.append(nn.Dropout(dropout))
 
         for _ in range(num_layers):
             self.layers.append(nn.Sequential(
@@ -92,15 +94,16 @@ class FFN(nn.Module):
                 nn.Linear(hidden_dim, output_dim)
             ))
             self.layer_norms.append(nn.LayerNorm(input_dim))
+            self.dropouts.append(nn.Dropout(dropout))
 
         print(f'Number of parameters in FFN: {sum(p.numel() for p in self.parameters())}')
 
     def forward(self, input_emb):
-        for layer, layer_norm in zip(self.layers, self.layer_norms):
+        for layer, layer_norm, dropout in zip(self.layers, self.layer_norms, self.dropouts):
             if self.residual:
-                input_emb = layer_norm(input_emb + layer(input_emb))
+                input_emb = layer_norm(input_emb + dropout(layer(input_emb)))
             else:
-                input_emb = layer(input_emb)
+                input_emb = dropout(layer(input_emb))
         mapped_emb = F.normalize(input_emb, p=2, dim=1)
         return mapped_emb
 
