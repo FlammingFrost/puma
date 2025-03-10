@@ -12,13 +12,13 @@ MODEL_NAME = "jinaai/jina-embeddings-v2-base-code"
 DATASET_PATH = "data/python_dataset/test"
 RESULTS_FILE = "quantization/cpu_runtime_results.txt"
 NUM_QUERIES = 1000
-NUM_TESTS = 10
+NUM_TESTS = 3
 
 def load_model(quantization):
     if quantization == "fp32":
-        return AutoModel.from_pretrained(MODEL_NAME, trust_remote_code=True).to("cpu")
+        return AutoModel.from_pretrained(MODEL_NAME, trust_remote_code=True)
     elif quantization == "fp16":
-        return AutoModel.from_pretrained(MODEL_NAME, torch_dtype=torch.float16, trust_remote_code=True).to("cpu")
+        return AutoModel.from_pretrained(MODEL_NAME, torch_dtype=torch.float16, trust_remote_code=True)
     elif quantization == "8bit":
         return AutoModel.from_pretrained(MODEL_NAME, load_in_8bit=True, device_map="auto", trust_remote_code=True)
     elif quantization == "4bit":
@@ -29,6 +29,8 @@ def load_model(quantization):
 def test_runtime(quantization):
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
     model = load_model(quantization)
+    print(f"Model loaded on {model.device}")
+    device = model.device
     model.eval()
     
     dataset = PythonDataset(DATASET_PATH, tokenizer, max_len=512)
@@ -38,7 +40,7 @@ def test_runtime(quantization):
     for _ in range(NUM_TESTS):
         start_time = time.time()
         for query_enc in tqdm(queries, desc=f"Testing {quantization}"):
-            query_enc = {key: value.to("cpu") for key, value in query_enc.items()}
+            query_enc = {key: value.to(device) for key, value in query_enc.items()}
             with torch.no_grad():
                 _ = model(**query_enc).pooler_output
         end_time = time.time()
@@ -49,7 +51,8 @@ def test_runtime(quantization):
     return mean_runtime, std_runtime
 
 def main():
-    quantizations = ["fp32", "fp16", "8bit", "4bit"]
+    # quantizations = ["fp32", "fp16", "8bit", "4bit"]
+    quantizations = [ "8bit", "4bit","fp32", "fp16"]
     results = {}
     
     for quantization in quantizations:
