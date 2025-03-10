@@ -12,51 +12,31 @@ from train.dataset_python import PythonDataset
 MODEL_NAME = "jinaai/jina-embeddings-v2-base-code"
 DATASET_PATH = "data/python_dataset/test"
 RESULTS_FILE = "quantization/cpu_runtime_results.txt"
-NUM_QUERIES = 100
+NUM_QUERIES = 1000
 NUM_TESTS = 3
-
-# Force PyTorch to use CPU
-torch.set_num_threads(os.cpu_count())
 
 def load_model(quantization):
     """
-    Load model with the specified quantization, forced to run on CPU.
+    Load the model with specified quantization settings.
     """
-    print(f"Loading model with {quantization} on CPU...")
-    
     try:
         if quantization == "fp32":
-            return AutoModel.from_pretrained(MODEL_NAME, trust_remote_code=True).to("cpu")
-        
+            return AutoModel.from_pretrained(MODEL_NAME, trust_remote_code=True).to("cuda")
         elif quantization == "fp16":
-            # FP16 is not natively supported on CPU, so it will fallback to FP32
-            print("FP16 is not well supported on CPU. Running in FP32 mode instead.")
-            return AutoModel.from_pretrained(MODEL_NAME, torch_dtype=torch.float32, trust_remote_code=True).to("cpu")
-
+            return AutoModel.from_pretrained(MODEL_NAME, torch_dtype=torch.float16, trust_remote_code=True).to("cuda")
         elif quantization == "8bit":
-            print("Applying dynamic quantization (INT8) for CPU.")
-            model = AutoModel.from_pretrained(MODEL_NAME, trust_remote_code=True).to("cpu")
-            return torch.quantization.quantize_dynamic(
-                model, {torch.nn.Linear}, dtype=torch.qint8
-            )
-
+            return AutoModel.from_pretrained(MODEL_NAME, load_in_8bit=True, device_map="auto", trust_remote_code=True)
         elif quantization == "4bit":
-            print("Applying 4-bit quantization (fallback to INT8, as 4-bit is not natively supported on CPU).")
-            model = AutoModel.from_pretrained(MODEL_NAME, trust_remote_code=True).to("cpu")
-            return torch.quantization.quantize_dynamic(
-                model, {torch.nn.Linear}, dtype=torch.qint8
-            )  # 4-bit quantization is not directly supported, so fallback to INT8.
-
+            return AutoModel.from_pretrained(MODEL_NAME, load_in_4bit=True, device_map="auto", trust_remote_code=True)
         else:
             raise ValueError(f"Unsupported quantization type: {quantization}")
-    
     except Exception as e:
         print(f"Error loading model with {quantization}: {e}")
         return None
 
 def test_runtime(quantization):
     """
-    Measure inference runtime for different quantization levels on CPU.
+    Measure inference runtime for different quantization levels.
     """
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
     model = load_model(quantization)
@@ -64,24 +44,27 @@ def test_runtime(quantization):
     if model is None:
         return None, None  # Skip if model loading failed
 
-    print(f"Model loaded on {next(model.parameters()).device} (CPU)")
-
+    device = model.device
+    print(f"Model loaded on {device}")
     model.eval()
 
-    # Load dataset and move queries to CPU
+    # Load dataset and move queries to the correct device
     dataset = PythonDataset(DATASET_PATH, tokenizer, max_len=512)
-    queries = [{key: value.to("cpu") for key, value in query_enc.items()} for query_enc, _ in dataset][:NUM_QUERIES]
+    queries = [{key: value.to(device) for key, value in query_enc.items()} for query_enc, _ in dataset][:NUM_QUERIES]
 
     runtimes = []
-
+    
     for _ in range(NUM_TESTS):
+        torch.cuda.synchronize() if torch.cuda.is_available() else None  # Ensure accurate timing
         start_time = time.perf_counter()
-
-        for query_enc in tqdm(queries, desc=f"Testing {quantization} on CPU"):
+        
+        for query_enc in tqdm(queries, desc=f"Testing {quantization}"):
             with torch.no_grad():
                 _ = model(**query_enc).pooler_output
 
+        torch.cuda.synchronize() if torch.cuda.is_available() else None
         end_time = time.perf_counter()
+        
         runtimes.append(end_time - start_time)
 
     mean_runtime = np.mean(runtimes)
@@ -91,9 +74,9 @@ def test_runtime(quantization):
 
 def main():
     """
-    Run inference benchmarking for different quantization methods on CPU.
+    Run inference benchmarking for different quantization methods.
     """
-    quantizations = ["fp32", "fp16", "8bit", "4bit"]  # Testing all modes
+    quantizations = ["8bit", "4bit", "fp32", "fp16"]
     results = {}
 
     for quantization in quantizations:
